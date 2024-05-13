@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS `PointsHistory` (
+    `id` INT NOT NULL AUTO_INCREMENT
+    ,`user_id` VARCHAR(100) NOT NULL
+    ,`point_change` INT NOT NULL
+    ,`reason` VARCHAR(100)
+    ,`created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ,PRIMARY KEY (`id`)
+)
