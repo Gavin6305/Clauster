@@ -2,20 +2,24 @@
 
 $ini = @parse_ini_file(".env");
 
-if ($ini && isset($ini["DB_URL"])) {
+$dbhost;
+$dbuser;
+$dbpass;
+$dbdatabase;
 
+if ($ini) {
     //load local .env file
-    $db_url = parse_url($ini["DB_URL"]);
+    $dbhost = $ini["host"];
+    $dbuser = $ini["user"];
+    $dbpass = $ini["pass"];
+    $dbdatabase = $ini["db"];
 }
 else {
-
     //load from heroku env variables
-    $db_url = parse_url(getenv("DB_URL"));
+    $dbhost = getenv("host");
+    $dbuser = getenv("user");
+    $dbpass = getenv("pass");
+    $dbdatabase = getenv("db");
 }
-
-$dbhost = $db_url["host"];
-$dbuser = $db_url["user"];
-$dbpass = $db_url["pass"];
-$dbdatabase = substr($db_url["path"], 1);
 
 ?>
