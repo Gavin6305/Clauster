@@ -17,8 +17,8 @@
     background-color: rgb(98, 245, 255);
     color:rgb(0, 0, 0);
 }
+
 nav {
-    background-color: rgb(0, 50, 187);
     height: 5%;
     
 }
@@ -30,17 +30,29 @@ nav li a{
     color: rgb(255, 255, 255); 
 }
 
-input {
-    font-size: large;
-    width: 50%;
-    height: 5%;
-    display: block;
-    border: 1px solid rgb(0, 0, 0);
-    box-sizing: border-box;
-  }
-  
-body{ 
-    font-size: large;
-    background-color: rgb(208, 246, 255);
-    color: rgb(0, 0, 0);
+
+.nav-bg-custom {
+    background-color: rgb(37, 38, 39);
+}
+.nav-link, .navbar-brand {
+    color: rgb(242, 239, 233);
+}
+
+body, .bg-custom {
+    background-color: rgb(144, 78, 85);
+}
+
+.card-bg-custom {
+    background-color: rgb(242, 239, 233);
+}
+
+.clauster-logo {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 3vw;
+}
+
+.btn-custom {
+    background-color: rgb(37, 38, 39);
+    color: rgb(242, 239, 233);
 }

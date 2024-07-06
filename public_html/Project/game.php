@@ -168,7 +168,6 @@ function startGame() {
 //Comfort zone spots
 comfortSpots = [];
 
-
 // Show the end game screen
 function endGame() {
   erase();
