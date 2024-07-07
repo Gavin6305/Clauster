@@ -2,28 +2,72 @@
 require(__DIR__ . "/../../partials/nav.php");
 reset_session();
 ?>
-<div class="container-fluid">
-    <h1>Register</h1>
-    <form onsubmit="return validate(this)" method="POST">
-        <div class="mb-3">
-            <label class="form-label" for="email">Email</label>
-            <input class="form-control" type="email" id="email" name="email" required />
+<!-- Register page -->
+<section class="bg-custom py-3 py-md-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-10 col-md-9 col-lg-7 col-xl-6 col-xxl-5">
+                <div class="card border border-dark rounded-3 shadow-sm">
+                    <div class="card-bg-custom card-body p-3 p-md-4 p-xl-5">
+                        <!-- Register for clauster -->
+                        <div class="text-center mb-3">
+                            <h1>Create an account</h1>
+                        </div>
+                        <!-- Account description -->
+                        <p class="fs-6 fw-normal text-center text-secondary mb-4">
+                            Create/join competitions<br>
+                            Collect points to spend on exclusive items<br>
+                            Compete with other players on the leaderboards
+                        </p>
+                        <!-- Register form -->
+                        <form onsubmit="return validate(this)" method="POST">
+                            <div class="row gy-2 overflow-hidden">
+                                <!-- Email input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="email" id="email" name="email" required />
+                                        <label class="form-label" for="email">Email</label>
+                                    </div>
+                                </div>
+                                <!-- Username input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="text" name="username" required maxlength="30" />
+                                        <label class="form-label" for="username">Username</label>
+                                    </div>
+                                </div>
+                                <!-- Password input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="password" id="pw" name="password" required minlength="8" />
+                                        <label class="form-label" for="pw">Password</label>
+                                    </div>
+                                </div>
+                                <!-- Confirm Password input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="password" name="confirm" required minlength="8" />
+                                        <label class="form-label" for="confirm">Confirm password</label>
+                                    </div>
+                                </div>
+                                <!-- Submit button -->
+                                <div class="col-12">
+                                    <div class="d-grid my-3">
+                                        <button class="btn btn-custom btn-lg" type="submit">Register</button>
+                                    </div>
+                                </div>
+                                <!-- Login link -->
+                                <div class="col-12">
+                                    <p class="m-0 text-secondary text-center">Already have an account? <a href="login.php" class="link-primary text-decoration-none">Log in</a></p>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label" for="username">Username</label>
-            <input class="form-control" type="text" name="username" required maxlength="30" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label" for="pw">Password</label>
-            <input class="form-control" type="password" id="pw" name="password" required minlength="8" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label" for="confirm">Confirm</label>
-            <input class="form-control" type="password" name="confirm" required minlength="8" />
-        </div>
-        <input type="submit" class="mt-3 btn btn-primary" value="Register" />
-    </form>
-</div>
+    </div>
+</section>
 <script>
     function validate(form) {
         //TODO 1: implement JavaScript validation
@@ -33,8 +77,8 @@ reset_session();
     }
 </script>
 <?php
-//TODO 2: add PHP Code
 if (isset($_POST["email"]) && isset($_POST["password"]) && isset($_POST["confirm"])) {
+    // Set user attributes from $_POST
     $email = se($_POST, "email", "", false);
     $password = se($_POST, "password", "", false);
     $confirm = se(
@@ -44,7 +88,8 @@ if (isset($_POST["email"]) && isset($_POST["password"]) && isset($_POST["confirm
         false
     );
     $username = se($_POST, "username", "", false);
-    //TODO 3
+
+    // Error checking
     $hasError = false;
     if (empty($email)) {
         flash("Email must not be empty", "danger");
@@ -80,14 +125,18 @@ if (isset($_POST["email"]) && isset($_POST["password"]) && isset($_POST["confirm
         $hasError = true;
     }
     if (!$hasError) {
-        //TODO 4
+        // Hash the password before storing it in DB
         $hash = password_hash($password, PASSWORD_BCRYPT);
+
+        // Connect to DB and prepare query with user attributes
         $db = getDB();
         $stmt = $db->prepare("INSERT INTO Users (email, password, username) VALUES(:email, :password, :username)");
         try {
+            // Execute query
             $stmt->execute([":email" => $email, ":password" => $hash, ":username" => $username]);
             flash("Successfully registered!");
-        } catch (Exception $e) {
+        } 
+        catch (Exception $e) {
             users_check_duplicate($e->errorInfo);
         }
     }
