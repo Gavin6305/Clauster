@@ -1,3 +1,4 @@
+/* Flash message */
 .alert-success {
     background-color: rgb(161, 255, 161);
     color:rgb(0, 0, 0);
@@ -18,41 +19,95 @@
     color:rgb(0, 0, 0);
 }
 
+/* Global color variables */
+:root {
+    /* Navbar */
+    --navbarColor: rgb(37, 38, 39);
+    --navbarTextColor: rgb(242, 239, 233);
+    /* Body */
+    --bodyColor: rgb(81, 47, 53);
+    --bodyTextColor: rgb(0,0,0);
+    /* Cards */
+    --cardColor: rgb(242, 239, 233);
+    --cardTextColor: rgb(0,0,0);
+    /* Buttons */
+    --buttonColor: rgb(37, 38, 39);
+    --buttonTextColor: rgb(242, 239, 233);
+    --buttonTextHoverColor: rgb(0, 123, 255);
+    /* Tables */
+    --tableHeadingColor: rgb(37, 38, 39);
+    --tableHeadingTextColor: rgb(242, 239, 233);
+    --tableBodyColor: var(--cardColor);
+    --tableBodyTextColor: var(--cardTextColor);
+}
+
+/* Remove hyperlinks from links */
+a {
+    text-decoration: none;
+}
+
+/* Navbar layout */
 nav {
-    height: 5%;
-    
+    height: 5vh;
 }
 nav li {
     display: inline-block;
-    margin: 10px;
+    margin: 1vh;
 }
-nav li a{
-    color: rgb(255, 255, 255); 
+.nav-profile-link {
+    margin-left: auto;
 }
 
-
+/* Navbar background */
 .nav-bg-custom {
-    background-color: rgb(37, 38, 39);
+    background-color: var(--navbarColor);
 }
+/* Navbar text */
 .nav-link, .navbar-brand {
-    color: rgb(242, 239, 233);
+    color: var(--navbarTextColor);
 }
 
+/* Body background */
 body, .bg-custom {
-    background-color: rgb(144, 78, 85);
+    background-color: var(--bodyColor);
 }
 
+/* Card background */
 .card-bg-custom {
-    background-color: rgb(242, 239, 233);
+    background-color: var(--cardColor);
+}
+
+/* Table heading */
+.table-heading {
+    background-color: var(--tableHeadingColor);
+    color: var(--tableHeadingTextColor);
+}
+/* Table body */
+.table-body {
+    background-color: var(--tableBodyColor);
+    color: var(--tableBodyTextColor);
+}
+/* Buttons */
+.btn-custom {
+    background-color: var(--buttonColor);
+    color: var(--buttonTextColor);
+    transition: 0.2s;
+}
+/* Button text hover */
+.btn-custom:hover {
+    color: var(--buttonTextHoverColor);
+}
+
+.top-scores-container {
+    padding-bottom: 1vw;
+}
+
+table {
+    border: 1px solid;
 }
 
 .clauster-logo {
     font-family: 'Courier New', Courier, monospace;
     font-weight: bold;
     font-size: 3vw;
-}
-
-.btn-custom {
-    background-color: rgb(37, 38, 39);
-    color: rgb(242, 239, 233);
 }

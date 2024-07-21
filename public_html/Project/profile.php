@@ -1,18 +1,18 @@
 <?php
 require_once(__DIR__ . "/../../partials/nav.php");
 //is_logged_in(true);
-/**
- * Logic:
- * Check if query params have an id
- * If so, use that id
- * Else check logged in user id
- * otherwise redirect away
- */
+
+// Get user id from $_GET (the profile page's user)
 $user_id = se($_GET, "id", get_user_id(), false);
 error_log("user id $user_id");
+
+// Compare $user_id from page to user id from $_SESSION
 $isMe = $user_id === get_user_id();
-//!! makes the value into a true or false value regardless of the data https://stackoverflow.com/a/2127324
-$edit = !!se($_GET, "edit", false, false); //if key is present allow edit, otherwise no edit
+
+// If edit is present in page's variables allow edit
+$edit = !!se($_GET, "edit", false, false); 
+
+// If $user_id from page is not valid, redirect away
 if ($user_id < 1) {
     flash("Invalid user", "danger");
     redirect("home.php");
@@ -21,11 +21,17 @@ if ($user_id < 1) {
 ?>
 
 <?php
+/* Update user account information from edit form */
 if (isset($_POST["save"]) && $isMe && $edit) {
+    // Connect to DB
     $db = getDB();
+
+    // Get user info from $_POST (update profile form)
     $email = se($_POST, "email", null, false);
     $username = se($_POST, "username", null, false);
     $visibility = !!se($_POST, "visibility", false, false) ? 1 : 0;
+
+    // Error checking
     $hasError = false;
     //sanitize
     $email = sanitize_email($email);
@@ -39,15 +45,19 @@ if (isset($_POST["save"]) && $isMe && $edit) {
         $hasError = true;
     }
     if (!$hasError) {
+        // Update user information
         $params = [":email" => $email, ":username" => $username, ":id" => get_user_id(), ":vis" => $visibility];
         $stmt = $db->prepare("UPDATE Users set email = :email, username = :username, is_public = :vis where id = :id");
         try {
             $stmt->execute($params);
-        } catch (Exception $e) {
+            flash("Profile successfully updated!", "success");
+        } 
+        catch (Exception $e) {
             users_check_duplicate($e->errorInfo);
         }
     }
-    //select fresh data from table
+
+    // Set $_SESSION user's email and username with fresh data from table
     $stmt = $db->prepare("SELECT id, email, IFNULL(username, email) as `username` from Users where id = :id LIMIT 1");
     try {
         $stmt->execute([":id" => get_user_id()]);
@@ -56,22 +66,22 @@ if (isset($_POST["save"]) && $isMe && $edit) {
             //$_SESSION["user"] = $user;
             $_SESSION["user"]["email"] = $user["email"];
             $_SESSION["user"]["username"] = $user["username"];
-        } else {
+        } 
+        else {
             flash("User doesn't exist", "danger");
         }
-    } catch (Exception $e) {
+    } 
+    catch (Exception $e) {
         flash("An unexpected error occurred, please try again", "danger");
         //echo "<pre>" . var_export($e->errorInfo, true) . "</pre>";
     }
 
-
-    //check/update password
+    // Check/update password
     $current_password = se($_POST, "currentPassword", null, false);
     $new_password = se($_POST, "newPassword", null, false);
     $confirm_password = se($_POST, "confirmPassword", null, false);
     if (!empty($current_password) && !empty($new_password) && !empty($confirm_password)) {
         if ($new_password === $confirm_password) {
-            //TODO validate current
             $stmt = $db->prepare("SELECT password from Users where id = :id");
             try {
                 $stmt->execute([":id" => get_user_id()]);
@@ -84,39 +94,54 @@ if (isset($_POST["save"]) && $isMe && $edit) {
                             ":id" => get_user_id(),
                             ":password" => password_hash($new_password, PASSWORD_BCRYPT)
                         ]);
-
                         flash("Password reset", "success");
                     } else {
                         flash("Current password is invalid", "warning");
                     }
                 }
-            } catch (Exception $e) {
+            } 
+            catch (Exception $e) {
                 echo "<pre>" . var_export($e->errorInfo, true) . "</pre>";
             }
-        } else {
+        } 
+        else {
             flash("New passwords don't match", "warning");
         }
     }
 }
 
-$email = get_user_email();
-$username = get_username();
-$user_id = get_user_id();
-$points = getPoints($user_id);
+/* Display user account information */
+
+// If user viewing their own page, then get from $_SESSION, otherwise get from page ($_GET)
+$user_id = $isMe ? get_user_id() : se($_GET, "id", -1, false);
+
+// Public info
+$username = "";
 $created = "";
+$best_score = get_best_score($user_id);
+
+// Private info
+$email = "";
+$points = "";
 $public = false;
 
+// Get fresh data from table for user from page
 $db = getDB();
-$stmt = $db->prepare("SELECT username, created, is_public from Users where id = :id");
+$stmt = $db->prepare("SELECT username, created, email, points, is_public from Users where id = :id");
 
 try {
+    // Get user attributes from query
     $stmt->execute([":id" => $user_id]);
     $r = $stmt->fetch(PDO::FETCH_ASSOC);
     error_log("user: " . var_export($r, true));
     $username = se($r, "username", "", false);
     $created = se($r, "created", "", false);
-    $public = se($r, "is_public", 0, false) > 0;
-    if (!$public && !$isMe) {
+    $email = se($r, "email", "", false);
+    $points = se($r, "points", "", false);
+    $public = se($r, "is_public", "", false);
+
+    // If user is not viewing their own page, and page's user is private
+    if (!$isMe && !$public) {
         flash("User's profile is private", "warning");
         redirect("home.php");
         //die(header("Location: home.php"));
@@ -153,152 +178,206 @@ $all_comps = get_latest_comps($user_id);
 ?>
 
 <div class="container-fluid">
-    <h1>Profile
-    <?php if ($isMe) : ?>
-        <?php if ($edit) : ?>
-            <a class="btn btn-primary" href="?">View</a>
-        <?php else : ?>
-            <a class="btn btn-primary" href="?edit=true">Edit Profile</a>
-        <?php endif; ?>
-    <?php endif; ?>
-    </h1>
-    <div>
-        <h4><?php echo  "<p>Points: ", $points . "</p>"; ?></h4>
-    </div>
-    <div>
-        <h3>Score History</h3>
-        <?php if (count($all_scores) > 0) : ?>
-        <table class="table text-dark">
-            <thead>
-                <th>Score</th>
-                <th>Time</th>
-            </thead>
-            <tbody>
-                <?php foreach ($scores_p as $score) : ?>
-                    <tr>
-                        <td><?php se($score, "score", 0); ?></td>
-                        <td><?php se($score, "created", "-"); ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        <center>
-            <ul class="s_pagination">
-            <?php
-                $url = get_url("profile.php?s_start=");
-                if($page_counter == 0){
-                    echo "<li><a href=" . $url . "0 class='active'>0</a></li>";
-                    for($j = 1; $j < $paginations; $j++) { 
-                        echo "<li><a href=" . $url . "$j>".$j."</a></li>";
-                    }
-                }
-                else {
-                    echo "<li><a href=" . $url . "$previous>Previous</a></li>";
-                    for($j=0; $j < $paginations; $j++) {
-                        if($j == $page_counter) {
-                            echo "<li><a href=" . $url . "$j class='active'>".$j."</a></li>";
-                        }
-                        else{
-                            echo "<li><a href=" . $url . "$j>".$j."</a></li>";
-                        } 
-                    }
-                    if($j != $page_counter+1) {
-                        echo "<li><a href=" . $url . "$next>Next</a></li>";
-                    } 
-                } 
-            ?>
-            </ul>
-        </center>
-        <?php endif ?> 
-        <?php if (count($all_scores) <= 0) : ?>
-            <a href="<?php echo get_url('game.php'); ?>">Set your first score!</a>
-        <?php endif ?>
-    </div>
-    <div>
-        <h3>Competition History</h3>
-        <?php if (count($all_comps) > 0) : ?>
-            <table class="table text-dark">
-                <thead>
-                    <th>Name</th>
-                    <th>Expires</th>
-                    <th>Current Reward</th>
-                    <th>Join Fee</th>
-                    <th>Current Participants</th>
-                    <th>Min. Participants</th>
-                    <th>Score to Qualify</th>
-                    <th>1st pl. Reward</th>
-                    <th>2nd pl. Reward</th>
-                    <th>3rd pl. Reward</th>
-                </thead>
-                <tbody>
-                    <?php foreach ($all_comps as $comp) : ?>
-                    <?php $comp_info = get_info_comp($comp['comp_id']); ?>
-                        <tr>
-                        <td>
-                            <?php 
-                                $comp_id = $comp_info['id'];
-                                $comp_name = $comp_info['name'];
-                                include(__DIR__ . "/../../partials/comp_link.php"); 
-                            ?>
-                        </td>
-                        <td><?php echo $comp_info['expires']; ?></td>
-                        <td><?php echo $comp_info['current_reward']; ?></td>
-                        <td><?php echo $comp_info['join_fee']; ?></td>
-                        <td><?php echo $comp_info['current_participants']; ?></td>
-                        <td><?php echo $comp_info['min_participants']; ?></td>
-                        <td><?php echo $comp_info['min_score']; ?></td>
-                        <td><?php echo $comp_info['first_place_per']; ?></td>
-                        <td><?php echo $comp_info['second_place_per']; ?></td>
-                        <td><?php echo $comp_info['third_place_per']; ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>   
-        <?php endif ?>
-        <?php if (count($all_comps) <= 0) : ?>
-            <a href="<?php echo get_url('active_competitions.php'); ?>">Join a competition!</a>
-        <?php endif ?>
-    </div>
-    <?php if (!$edit) : ?>
-        <div><h3>Username: <?php se($username); ?></h3></div>
-        <div><h3>Joined: <?php se($created); ?></h3></div>
-        <!-- TODO any other public info -->
-    <?php endif; ?>
-
-    <?php if ($isMe && $edit) : ?>
-    <form method="POST" onsubmit="return validate(this);">
-        <div class="mb-3">
-            <div class="form-check form-switch">
-                <input name="visibility" class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" <?php if ($public) echo "checked"; ?>>
-                <label class="form-check-label" for="flexSwitchCheckDefault">Make Profile Public</label>
+    <!-- Profile card -->
+    <section class="bg-custom py-3 py-md-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-12 col-sm-10 col-md-12 col-lg-10 col-xl-6 col-xxl-10">
+                    <div class="card border border-dark rounded-3 shadow-sm">
+                        <div class="card-bg-custom card-body p-3 p-md-5 p-xl-5">
+                            <!-- Public info -->
+                            <?php if (!$edit) : ?>
+                                <!-- Username -->
+                                <div class="text-center mb-3">
+                                    <h2><?php se($username); ?></h2>
+                                </div>
+                            <?php endif; ?>
+                            <!-- Edit profile button -->
+                            <?php if ($isMe) : ?>
+                                <div class="col-12">
+                                    <div class="d-grid my-3">
+                                        <?php if ($edit) : ?>
+                                            <div class="text-center mb-3">
+                                                <h2>Edit profile</h2>
+                                            </div>
+                                            <a class="btn btn-custom" href="?">View</a>
+                                        <?php else : ?>
+                                            <a class="btn btn-custom" href="?edit=true">Edit Profile</a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                            <?php if (!$edit) : ?>
+                                <!-- Public info -->
+                                <div class="fs-6 fw-normal text-start text-secondary mb-4">
+                                    <!-- Best score -->
+                                    <?php if ($best_score > 0) : ?>
+                                        <h5><?php echo "Best score: " . $best_score; ?></h5>
+                                    <?php endif; ?>
+                                    <!-- Joined -->
+                                    <h5>Joined: <?php se($created); ?></h5>
+                                </div>
+                                <!-- Private info -->
+                                <?php if ($isMe) : ?>
+                                    <div class="fs-6 fw-normal text-start text-secondary mb-4">
+                                        <!-- Points -->
+                                        <h5><?php echo "Points: " . $points; ?></h5>
+                                        <!-- Email -->
+                                        <h5>Email: <?php se($email); ?></h5>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                            <!-- Tables -->
+                            <?php if (!$edit) : ?>
+                                <div>
+                                    <?php if (count($all_scores) > 0) : ?>
+                                        <!-- Score history table -->
+                                        <table class="table">
+                                            <!-- Heading -->
+                                            <thead class="table-heading text-center">
+                                                <th colspan="2">Score History</th>
+                                            </thead>
+                                            <!-- Records -->
+                                            <tbody class="table-body text-center">
+                                                <?php foreach ($scores_p as $score) : ?>
+                                                    <tr>
+                                                        <td><?php se($score, "score", 0); ?></td>
+                                                        <td><?php se($score, "created", "-"); ?></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    <?php endif ?> 
+                                    <?php if (count($all_scores) <= 0 && $isMe) : ?>
+                                        <a href="<?php echo get_url('game.php'); ?>">Set your first score!</a>
+                                    <?php endif ?>
+                                </div>
+                            <?php endif; ?>
+                            <!-- Competition history -->
+                            <?php if (!$edit) : ?>
+                                <div>
+                                    <?php if (count($all_comps) > 0) : ?>
+                                        <table class="table">
+                                            <thead class="table-heading text-center">
+                                                <th>Name</th>
+                                                <th>Expires</th>
+                                                <th>Current Reward</th>
+                                                <th>Join Fee</th>
+                                                <th>Current Participants</th>
+                                                <th>Min. Participants</th>
+                                                <th>Score to Qualify</th>
+                                                <th>1st pl. Reward</th>
+                                                <th>2nd pl. Reward</th>
+                                                <th>3rd pl. Reward</th>
+                                            </thead>
+                                            <tbody class="table-body text-center">
+                                                <?php foreach ($all_comps as $comp) : ?>
+                                                <?php $comp_info = get_info_comp($comp['comp_id']); ?>
+                                                    <tr>
+                                                    <td>
+                                                        <?php 
+                                                            $comp_id = $comp_info['id'];
+                                                            $comp_name = $comp_info['name'];
+                                                            include(__DIR__ . "/../../partials/comp_link.php"); 
+                                                        ?>
+                                                    </td>
+                                                    <td><?php echo $comp_info['expires']; ?></td>
+                                                    <td><?php echo $comp_info['current_reward']; ?></td>
+                                                    <td><?php echo $comp_info['join_fee']; ?></td>
+                                                    <td><?php echo $comp_info['current_participants']; ?></td>
+                                                    <td><?php echo $comp_info['min_participants']; ?></td>
+                                                    <td><?php echo $comp_info['min_score']; ?></td>
+                                                    <td><?php echo $comp_info['first_place_per']; ?></td>
+                                                    <td><?php echo $comp_info['second_place_per']; ?></td>
+                                                    <td><?php echo $comp_info['third_place_per']; ?></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>   
+                                    <?php endif ?>
+                                    <?php if (count($all_comps) <= 0 && $isMe) : ?>
+                                        <a href="<?php echo get_url('active_competitions.php'); ?>">Join a competition!</a>
+                                    <?php endif ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label" for="email">Email</label>
-            <input class="form-control" type="email" name="email" id="email" value="<?php se($email); ?>" />
+    </section>
+    <!-- Edit account section -->
+    <?php if ($isMe && $edit) : ?>
+    <section class="bg-custom py-3 py-md-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-12 col-sm-10 col-md-9 col-lg-7 col-xl-6 col-xxl-10">
+                    <div class="card border border-dark rounded-3 shadow-sm">
+                        <div class="card-bg-custom card-body p-3 p-md-4 p-xl-5">
+                            <!-- Edit account form -->
+                            <form method="POST" onsubmit="return validate(this);">
+                                <!-- Make profile public/private -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <div class="form-check form-switch">
+                                            <input name="visibility" class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" <?php if ($public) echo "checked"; ?>>
+                                            <label class="form-check-label" for="flexSwitchCheckDefault">Make Profile Public</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Email input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="email" name="email" id="email" value="<?php se($email); ?>" />
+                                        <label class="form-label" for="email">Email</label>
+                                    </div>
+                                </div>
+                                <!-- Username input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="text" name="username" id="username" value="<?php se($username); ?>" />
+                                        <label class="form-label" for="username">Username</label>
+                                    </div>
+                                </div>
+                                <!-- Password reset label -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">Password Reset</div>
+                                </div>
+                                <!-- Current password input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="password" name="currentPassword" id="cp" />
+                                        <label class="form-label" for="cp">Current Password</label>
+                                    </div>
+                                </div>
+                                <!-- New password input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="password" name="newPassword" id="np" />
+                                        <label class="form-label" for="np">New Password</label>
+                                    </div>
+                                </div>
+                                <!-- Confirm password input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="password" name="confirmPassword" id="conp" />
+                                        <label class="form-label" for="conp">Confirm Password</label>  
+                                    </div>
+                                </div>
+                                <!-- Update profile button -->
+                                <div class="col-12">
+                                    <div class="d-grid my-3">
+                                        <input type="submit" class="btn btn-custom" value="Update Profile" name="save" />
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label" for="username">Username</label>
-            <input class="form-control" type="text" name="username" id="username" value="<?php se($username); ?>" />
-        </div>
-        <!-- DO NOT PRELOAD PASSWORD -->
-        <div class="mb-3">Password Reset</div>
-        <div class="mb-3">
-            <label class="form-label" for="cp">Current Password</label>
-            <input class="form-control" type="password" name="currentPassword" id="cp" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label" for="np">New Password</label>
-            <input class="form-control" type="password" name="newPassword" id="np" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label" for="conp">Confirm Password</label>
-            <input class="form-control" type="password" name="confirmPassword" id="conp" />
-        </div>
-        <input type="submit" class="mt-3 btn btn-primary" value="Update Profile" name="save" />
-    </form>
+    </section>
     <?php endif; ?>
-
 </div>
 <script>
     function validate(form) {
@@ -329,6 +408,7 @@ $all_comps = get_latest_comps($user_id);
         return isValid;
     }
 </script>
+
 <?php
 require_once(__DIR__ . "/../../partials/flash.php");
 ?>

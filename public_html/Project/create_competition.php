@@ -3,9 +3,10 @@
     is_logged_in(true);
 ?>
 <?php
+    // Check if values from form are set
     if (isset($_POST["compname"]) && isset($_POST["1reward"]) && isset($_POST["2reward"]) && isset($_POST["3reward"]) && 
     isset($_POST["compcost"]) && isset($_POST["duration"]) && isset($_POST["minscore"]) && isset($_POST["minplayers"])) {
-        //Values to put into table
+        // Values to put into table
         try {
             $compname = se($_POST, "compname", "", false);
             $reward1 = se($_POST, "1reward", "", false);
@@ -20,10 +21,12 @@
         catch (Exception $e) {
             flash("<pre>" . "Could not submit competition" . "</pre>", "danger");
         }
+
         //end values to put in table
         $hasError = false;
         $compcreationsuccess = false;
-        /* User friendly messages */
+
+        // Error checking
         if (empty($compname)) {
             flash("Competition must have a name", "warning");
             $hasError = true;
@@ -78,10 +81,10 @@
         } else {
             $minplayers = (int)$minplayers;
         }
-        //end user friendly messages
 
-        //submitting to Competitions table
-        if (!$hasError) {                   
+        // Submitting to Competitions table and adding the creator to the competition
+        if (!$hasError) { 
+            // Connect to DB and prepare query                  
             $db = getDB();
             $user_id = get_user_id();
             $stmt = $db->prepare(
@@ -91,19 +94,24 @@
                 VALUES (:name, :duration, :startreward, :joinfee, :minplayer, :minscore, :reward1, :reward2, :reward3, :cost, 
                     ((DATE_ADD(CURRENT_TIMESTAMP, INTERVAL :duration DAY))), :startreward, 1, false);"
             );
+
+            // Add competition
             try {
                 try {
+                    // Check if user has enough points
                     $fetchuserpoints = getPoints($user_id);
-                    if ($fetchuserpoints >= $compcreatecost) { //Checks if user has enough points
+                    if ($fetchuserpoints >= $compcreatecost) {
                         try {
-                            //Adds the competition to the table
+                            // Add the competition to the table
                             $stmt->execute([
                                 ":name" => $compname, ":duration" => $duration, ":startreward" => 1, ":joinfee" => $compcost, ":minplayer" => $minplayers,
                                 ":minscore" => $minscore, ":reward1" => $reward1, ":reward2" => $reward2, ":reward3" => $reward3, ":cost" => $compcreatecost
                             ]);
+
                             //Deducts the cost
                             add_points($user_id, -1 * $compcreatecost, "Created competition $compname");
                             
+                            // Show success message
                             flash("Competition Created!", "success");
                             $compcreationsuccess = true;
                         } 
@@ -126,15 +134,19 @@
                 flash( "Unknown Error", "danger");
                 $compcreationsuccess = false;
             }
+
+            // Join creator to competition
             if ($compcreationsuccess) {
-                //Joins the creator to the competition
                 try {
+                    // Get competition from Competitions
                     $findcomp = $db->prepare("SELECT id FROM Competitions WHERE (name=:name AND duration=:duration AND join_fee=:joinfee AND min_participants=:minplayer AND 
                                                 paid_out=0 AND min_score=:minscore AND first_place_per BETWEEN (:reward1m-0.000001) AND (:reward1p+0.000001) AND second_place_per BETWEEN (:reward2m-0.000001) AND (:reward2p+0.000001));");
                     $findcomp->execute([":name" => $compname, ":duration" => $duration, ":joinfee" => $compcost, ":minplayer" => $minplayers,
                                         ":minscore" => $minscore, ":reward1m" => ($reward1-0.000001), ":reward1p" => ($reward1+0.000001), ":reward2m" => ($reward2-0.000001), ":reward2p" => ($reward2+0.000001)]);
             
                     $compid = $findcomp->fetchAll(PDO::FETCH_ASSOC);
+
+                    // Add creator to CompetitionParticipants
                     $addusertocomp = $db->prepare("INSERT INTO CompetitionParticipants (comp_id, user_id) VALUES (:compid, :uid);");
                     $addusertocomp->execute([":compid" => $compid[0]["id"], ":uid" => get_user_id()]);
                 
@@ -142,7 +154,8 @@
                     flash( "Could not join User to competition", "danger");
                     $compcreationsuccess = false;
                 }
-                //Ensures that the variables don't get carried over into the next session
+                
+                // Ensures that the variables don't get carried over into the next session
                 echo "<script> (function() {var clear = document.getElementsByClassName('tobecleared'); 
                     var test = document.getElementById('TEST'); test.innerHTML = clear; }) </script>";
                 $compname = "";
@@ -155,51 +168,96 @@
                 $minplayers = "";
             }
         }
-    }?>
+    }
+?>
 
-<div class="container-fluid">
-    <h1>Create Competition</h1>
-    <div class="column" id="newcomp">
-        <form onsubmit="return validate(this)" method="POST">
-            <div>
-                <label for="compname" class="tobecleared">Competition Name:</label>
-                <input type="text" name="compname" required minlength="2" required value="<?php if(!(empty($compname))) {se($compname);} ?>"/>
+<section class="bg-custom py-3 py-md-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-10 col-md-12 col-lg-10 col-xl-6 col-xxl-8">
+                <div class="card border border-dark rounded-3 shadow-sm">
+                    <div class="card-bg-custom card-body p-3 p-md-4 p-xl-5">
+                        <!-- Create competition label -->
+                        <div class="text-center mb-3">
+                            <h1>Create a Competition</h1>
+                        </div>
+                        <!-- Create competition form -->
+                        <form onsubmit="return validate(this)" method="POST">
+                            <div class="row gy-2 overflow-hidden">
+                                <!-- Competition name input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="text" name="compname" required minlength="2" required value="<?php if(!(empty($compname))) {se($compname);} ?>"/>
+                                        <label for="compname" class="tobecleared">Competition Name:</label>
+                                    </div>
+                                </div>
+                                <!-- First place reward input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="number" name="1reward" min="0" max="100" required value="<?php if(!(empty($reward1))) {se($reward1);} ?>"/>
+                                        <label for="1reward" class="tobecleared">First Place Reward: %</label>
+                                    </div>
+                                </div>
+                                <!-- Second place reward input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="number" name="2reward" min="0" max="100" required value="<?php if(!(empty($reward2))) {se($reward2);} ?>"/>
+                                        <label for="2reward" class="tobecleared">Second Place Reward: %</label> 
+                                    </div>
+                                </div>
+                                <!-- Third place reward input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="number" name="3reward" min="0" max="100" required value="<?php if(!(empty($reward3))) {se($reward3);} ?>"/>
+                                        <label for="3reward" class="tobecleared">Third Place Reward: %</label>
+                                    </div>
+                                </div>
+                                <!-- Cost to join input -->
+                                <div class="col-12">
+                                    <div id="notfreecost" class="form-floating mb-3">
+                                        <input class="form-control" type="number" id="notfreecostinput" name="compcost" min="0" required value="<?php if(!(empty($compcost))) {se($compcost);} ?>"/>
+                                        <label for="compcost" class="tobecleared">Competition Cost:</label>
+                                    </div>
+                                </div>
+                                <!-- Duration input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="number" name="duration" min="1" required value="<?php if(!(empty($duration))) {se($duration);} ?>"/>
+                                        <label for="duration" class="tobecleared">Duration (in days):</label>
+                                    </div>
+                                </div>
+                                <!-- Minimum score input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="number" name="minscore" min="0" required value="<?php if(!(empty($minscore))) {se($minscore);} ?>"/>
+                                        <label for="minscore" class="tobecleared">Minimum Score to Qualify:</label>
+                                    </div>
+                                </div>
+                                <!-- Minimum players input -->
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" type="number" name="minplayers" min="3" required value="<?php if(!(empty($minplayers))) {se($minplayers);} ?>"/>
+                                        <label for="minplayers" class="tobecleared">Minimum Amount of Players for Payout:</label>
+                                    </div>
+                                </div>
+                                <!-- Creation cost label -->
+                                <div class="col-12">
+                                    <p>Cost to create competition: 2 points</p>
+                                </div>
+                                <!-- Create button -->
+                                <div class="col-12">
+                                    <div class="d-grid my-3">
+                                        <button class="btn btn-custom btn-lg" type="submit">Create Competition!</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
-            <div>
-                <label for="1reward" class="tobecleared">First Place Reward: %</label>
-                <input type="number" name="1reward" min="0" max="100" required value="<?php if(!(empty($reward1))) {se($reward1);} ?>"/>
-            </div>
-            <div>
-                <label for="2reward" class="tobecleared">Second Place Reward: %</label>
-                <input type="number" name="2reward" min="0" max="100" required value="<?php if(!(empty($reward2))) {se($reward2);} ?>"/>
-            </div>
-            <div>
-                <label for="3reward" class="tobecleared">Third Place Reward: %</label>
-                <input type="number" name="3reward" min="0" max="100" required value="<?php if(!(empty($reward3))) {se($reward3);} ?>"/>
-            </div>
-            <div>
-                <label for="checkfree">Free to join?</label>
-                <input type="checkbox" id="isfree" name="checkfree" onclick="freeclick()"/>
-            </div>
-            <div id="notfreecost">
-                <label for="compcost" class="tobecleared">Competition Cost:</label>
-                <input type="number" id="notfreecostinput" name="compcost" min="0" required value="<?php if(!(empty($compcost))) {se($compcost);} ?>"/>
-            </div>
-            <div>
-                <label for="duration" class="tobecleared">Duration (in days):</label>
-                <input type="number" name="duration" min="1" required value="<?php if(!(empty($duration))) {se($duration);} ?>"/>
-            </div>
-            <div>
-                <label for="minscore" class="tobecleared">Minimum Score to Qualify:</label>
-                <input type="number" name="minscore" min="0" required value="<?php if(!(empty($minscore))) {se($minscore);} ?>"/>
-            </div>
-            <div>
-                <label for="minplayers" class="tobecleared">Minimum Amount of Players for Payout:</label>
-                <input type="number" name="minplayers" min="3" required value="<?php if(!(empty($minplayers))) {se($minplayers);} ?>"/>
-            </div>
-            <div><p><?php echo "The cost of creating the competition is: " . 1+1;?></p></div>
-            <input type="submit" value="Create" />
-        </form>
+        </div>
+    </div>
+</section>
 
 <?php
     require(__DIR__ . "/../../partials/flash.php");

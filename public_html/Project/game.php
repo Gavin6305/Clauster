@@ -26,7 +26,7 @@ var clusterRadius = 80;
 var zoneColor = '#FF8800';
 var enemyColor = '#FF9191';
 var charColor = '#5E9CFF';
-var aimColor = '#000000';
+var aimColor = '#FF0000';
 
 //Function to make a square
 function makeSquare(x, y, length, speed, inCircle) {
@@ -52,14 +52,14 @@ function makeCircle(x, y, r, color) {
 
 // Check if number a is in the range b to c (exclusive)
 function isWithin(a, b, c) {
-  return (a > b && a < c);
+  return (a >= b && a <= c);
 }
 
 // Return true if two squares a and b are colliding, false otherwise
 function isColliding(a, b) {
   var result = false;
-  if (isWithin(a.x, b.x, b.x + b.l) || isWithin(a.x + a.l, b.x, b.x + b.l)) {
-    if (isWithin(a.y, b.y, b.y + b.l) || isWithin(a.y + a.l, b.y, b.y + b.l)) {
+  if ((a.x + a.l/2 >= b.x - b.l/2) && (a.x - a.l/2 <= b.x + b.l/2)) {
+    if ((a.y + a.l/2 >= b.y - b.l/2) && (a.y - a.l/2 <= b.y + b.l/2)) {
       result = true;
     }
   }
@@ -192,11 +192,14 @@ function endGame() {
   context.fillText(saveStatus, canvas.width/2, canvas.height/1.75);
   context.fillStyle = '#000000';
   context.fillText('CLICK TO PLAY AGAIN', canvas.width / 2, canvas.height / 1.5);
+  
   //Add score to table
   var finalScore = score;
+
   let data = {
     score: finalScore
   }
+
   let http = new XMLHttpRequest();
   http.onreadystatechange = () => {
     if (http.readyState == 4) {
@@ -221,20 +224,24 @@ function erase() {
   context.fillRect(0, 0, canvas.width, canvas.height);
 }
 
-//Mouse component
+// Get mouse coordinates relative to canvas element
 var mouseX = 0;
 var mouseY = 0;
-var docWidth = 1920;
-var docLength = 937;
-var canvasPosX = 560;
-var canvasPosY = 105;
+var docWidth = window.innerWidth;
+var docLength = window.innerHeight;
+
 document.addEventListener('mousemove', (event) => {
+  var rect = canvas.getBoundingClientRect();
+  var canvasPosX = rect.left + window.scrollX;
+  var canvasPosY = rect.top + window.scrollY;
   mouseX = event.clientX - canvasPosX;
   mouseY = event.clientY - canvasPosY;
 });
 
+// Taken spots
 var takenSpots = 0;
 
+// User can only shoot one bullet at a time
 var isShotOnce = false;
 
 // Main draw loop
@@ -247,8 +254,9 @@ function draw() {
   }
 
   //Draw aim line
-  context.fillStyle = aimColor;
+  context.strokeStyle = aimColor;
   context.beginPath();
+  context.setLineDash([5, 15]);
   context.moveTo(canvas.width/2, canvas.height/2);
   context.lineTo(mouseX, mouseY);
   context.stroke();
@@ -260,7 +268,8 @@ function draw() {
   context.fillText('Score: ' + score, canvas.width/2, canvas.height/20);
   context.fillText('Enemies in Comfort Zone: ' + takenSpots, canvas.width/2, canvas.height/10 );
 
-  //Comfort zone circle
+  // Comfort zone circle
+  context.setLineDash([]);
   makeCircle(canvas.width/2, canvas.height/2, clusterRadius, zoneColor);
   
   // Move and draw the enemies
@@ -287,8 +296,8 @@ function draw() {
 
   //Make bullet and enemy disappear when they collide
   for (let i = 0; i < enemies.length; i++) {
+    var enemy = enemies[i];
     for (let j = 0; j < bullets.length; j++) {
-      var enemy = enemies[i];
       var bullet = bullets[j];
       if (!enemies[i].c && isColliding(enemy, bullet)) {
         enemies.splice(i, 1);

@@ -1,31 +1,40 @@
 <?php
 require_once(__DIR__ . "/db.php");
-$BASE_PATH = '/Project/'; //This is going to be a helper for redirecting to our base project path since it's nested in another folder
+
+// For redirection to the base project path
+$BASE_PATH = '/Project/';
+
+// Returns or echoes $v[$k], and it can be recognized by HTML
 function se($v, $k = null, $default = "", $isEcho = true)
 {
+    // Set $returnValue based on whether $v is an array or not
     if (is_array($v) && isset($k) && isset($v[$k])) {
         $returnValue = $v[$k];
-    } else if (is_object($v) && isset($k) && isset($v->$k)) {
+    } 
+    else if (is_object($v) && isset($k) && isset($v->$k)) {
         $returnValue = $v->$k;
-    } else {
+    } 
+    else {
         $returnValue = $v;
-        //added 07-05-2021 to fix case where $k of $v isn't set
-        //this is to kep htmlspecialchars happy
+        // If $v[$k] isn't set, then $returnValue is $default
         if (is_array($returnValue) || is_object($returnValue)) {
             $returnValue = $default;
         }
     }
+
+    // Set $returnValue to $default just in case it isn't set
     if (!isset($returnValue)) {
         $returnValue = $default;
     }
+
+    // Decide whether to return or echo
     if ($isEcho) {
-        //https://www.php.net/manual/en/function.htmlspecialchars.php
         echo htmlspecialchars($returnValue, ENT_QUOTES);
     } else {
-        //https://www.php.net/manual/en/function.htmlspecialchars.php
         return htmlspecialchars($returnValue, ENT_QUOTES);
     }
 }
+
 //TODO 2: filter helpers
 function sanitize_email($email = "")
 {
@@ -70,13 +79,17 @@ function get_user_email()
     }
     return "";
 }
+
+// Returns user ID from $_SESSION
 function get_user_id()
 {
-    if (is_logged_in()) { //we need to check for login first because "user" key may not exist
+    // If not logged in, there may be no user stored in $_SESSION
+    if (is_logged_in()) {
         return se($_SESSION["user"], "id", false, false);
     }
     return false;
 }
+
 //TODO 4: Flash Message Helpers
 function flash($msg = "", $color = "info")
 {
@@ -351,16 +364,20 @@ function join_to_comp ($user_id, $comp_id) {
 }
 
 function update_comp ($comp_id) {
+    // Connect to DB
     $db = getDB();
     $stmt = $db->prepare("SELECT user_id from CompetitionParticipants where comp_id = :cid");
+
     try {
-        //gets participants from CompetitionParticipants that are in this comp
+        // Gets participants from CompetitionParticipants that are in this comp
         $stmt->execute([":cid" => $comp_id]);
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $amount_of_users = count($users);
-        //gets participants in comp from Competitions
+
+        // Gets participants in comp from Competitions
         $prev_users = get_participants($comp_id);
     
+        // Updates 
         $points_to_add = $amount_of_users - $prev_users;
         $new_reward = get_current_reward($comp_id) + $points_to_add;
 
@@ -405,19 +422,26 @@ function get_current_reward ($comp_id) {
 }
 
 function calc_comp_winners () {
+    // Connect to DB
     $db = getDB();
+
     //Get all expired and not paid_out competitions
     $stmt = $db->prepare("SELECT id, current_participants, min_participants, created, expires, current_reward, first_place_per, second_place_per, third_place_per 
     FROM Competitions WHERE expires < CURRENT_TIMESTAMP AND paid_out = false");
+
     try {
+        // Multiple competitions will be expired and not paid out
         $stmt->execute();
         $comps = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        //For each competition
+
+        // Loop through the competitions recieved from query
         for ($i = 0; $i < count($comps); $i++) {
             $current_participants = $comps[$i]['current_participants'];
             $min_participants = $comps[$i]['min_participants'];
-            //Check that the participant count against the minimum required
+
+            // Check that the participant count against the minimum required
             if ($current_participants >= $min_participants) {
+                // Store individual attributes of the current competition
                 $comp_id = $comps[$i]['id'];
                 $comp_start = $comps[$i]['created'];
                 $comp_expires = $comps[$i]['expires'];
@@ -425,13 +449,22 @@ function calc_comp_winners () {
                 $second_percent = $comps[$i]['second_place_per'];
                 $third_percent = $comps[$i]['third_place_per'];
                 $reward = $comps[$i]['current_reward'];
-                //Get the top 3 winners: 
-                //Scores are calculated by the sum of the score from the Scores table where it was earned/created between Competition start and Competition expires timestamps
+
+                /* 
+                   Get the top 3 winners: 
+                   Scores are calculated by the sum of the score from the Scores table 
+                   where it was earned/created between Competition start and Competition expires timestamps 
+                */
+
+                // Get all users from current competition
                 $stmt2 = $db->prepare("SELECT user_id FROM CompetitionParticipants WHERE comp_id = :cid");
+
                 try {
+                    // Get all users from current competition
                     $stmt2->execute([":cid" => $comp_id]);
                     $users = $stmt2->fetchAll(PDO::FETCH_ASSOC);
-                    //Getting top 3 scores with method described above
+
+                    // Getting top 3 scores with method described above
                     $first_user = 0; $second_user = 0; $third_user = 0;
                     $first_score = 0; $second_score = 0; $third_score = 0;
                     for ($j = 0; $j < count($users); $j++) {
@@ -454,18 +487,22 @@ function calc_comp_winners () {
                             }
                         }
                     }
-                    //Calculate the payout (reward * place_percent)
+
+                    // Calculate the payout (reward * place_percent)
                     $first_payout = $reward * $first_percent / 100;
                     $second_payout = $reward * $second_percent / 100;
                     $third_payout = $reward * $third_percent / 100;
-                    //Round up the value (it’s ok to pay out an extra point here and there)
+
+                    // Round up the value (it’s ok to pay out an extra point here and there)
                     $first_payout = ceil($first_payout);
                     $second_payout = ceil($second_payout);
                     $third_payout = ceil($third_payout);
-                    //Create entries for the Users in the PointsHistory table (Updates points column in Users table as well)
+
+                    // Create entries for the Users in the PointsHistory table (Updates points column in Users table as well)
                     add_points($first_user, $first_payout, "Competition: first place reward");
                     add_points($second_user, $second_payout, "Competition: second place reward");
                     add_points($third_user, $third_payout, "Competition: third place reward");
+
                     //Mark the competition as paid_out = true
                     $stmt3 = $db->prepare("UPDATE Competitions SET paid_out = true WHERE id = :cid");
                     try {

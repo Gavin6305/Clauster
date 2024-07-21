@@ -29,6 +29,7 @@ if (isset($data["score"])) {
         $score = (int)se($data, "score", 0, false);
         http_response_code(200);
         save_score($score, $user_id, true);
+        add_points($user_id, floor($score / 10.0), "Won from game");
         //error_log("Score of $score saved successfully for $user_id");
     }
     else {

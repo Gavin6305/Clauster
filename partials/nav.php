@@ -37,7 +37,6 @@ require_once(__DIR__ . "/../lib/functions.php");
         <div class="collapse navbar-collapse" id="navContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0 nav-text-col">
                 <?php if (is_logged_in()) : ?>
-                    <li class="nav-item"><a class="nav-link" href="<?php echo get_url('profile.php'); ?>">Profile</a></li>
                     <li class="nav-item"><a class="nav-link" href="<?php echo get_url('game.php'); ?>">Clauster</a></li>
                     <li class="nav-item"><a class="nav-link" href="<?php echo get_url('create_competition.php'); ?>">Create a Competition</a></li>
                     <li class="nav-item"><a class="nav-link" href="<?php echo get_url('active_competitions.php'); ?>">Active Competitions</a></li>
@@ -61,6 +60,15 @@ require_once(__DIR__ . "/../lib/functions.php");
                 <?php endif; ?>
                 <?php if (is_logged_in()) : ?>
                     <li class="nav-item"><a class="nav-link" href="<?php echo get_url('logout.php'); ?>">Logout</a></li>
+                <?php endif; ?>
+            </ul>
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 nav-text-col">
+                <?php if (is_logged_in()) : ?>
+                    <li class="nav-item">
+                        <a class="nav-link" href="<?php echo get_url('profile.php'); ?>">
+                            <?php echo get_username(); ?>
+                        </a>
+                    </li>
                 <?php endif; ?>
             </ul>
         </div>

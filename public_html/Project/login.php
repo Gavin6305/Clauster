@@ -93,7 +93,7 @@ if (isset($_POST["email"]) && isset($_POST["password"])) {
 <section class="bg-custom py-3 py-md-5">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-12 col-sm-10 col-md-9 col-lg-7 col-xl-6 col-xxl-5">
+            <div class="col-12 col-sm-12 col-md-9 col-lg-7 col-xl-6 col-xxl-5">
                 <div class="card border border-dark rounded-3 shadow-sm">
                     <div class="card-bg-custom card-body p-3 p-md-4 p-xl-5">
                         <!-- Clauster logo -->
