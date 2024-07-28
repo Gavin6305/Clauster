@@ -22,7 +22,7 @@ require_once(__DIR__ . "/../../partials/nav.php");
 
 <section class="bg-custom py-3 py-md-5">
     <div class="container">
-        <div class="row justify-content-center">
+        <div class="row justify-content-center card-container">
             <div class="col-12 col-sm-10 col-md-12 col-lg-12 col-xl-12 col-xxl-12">
                 <div class="card border border-dark rounded-3 shadow-sm">
                     <div class="card-bg-custom card-body p-3 p-md-5 p-xl-5">
@@ -32,46 +32,34 @@ require_once(__DIR__ . "/../../partials/nav.php");
                         <div class="view-comp-info-container">
                             <table class="table text-dark">
                                 <thead class="table-heading text-center">
-                                    <th>Expires</th>
-                                    <th>Current Reward</th>
-                                    <th>Join Fee</th>
-                                    <th>Current Participants</th>
-                                    <th>Min. Participants for Payout</th>
-                                    <th>Score to Qualify</th>
-                                    <th>1st pl. Reward</th>
-                                    <th>2nd pl. Reward</th>
-                                    <th>3rd pl. Reward</th>
+                                    <th colspan="2">Information</th>
                                 </thead>
-                                <tbody class="table-body text-center">
-                                    <tr>
-                                        <td><?php echo $expires ?></td>
-                                        <td><?php echo $reward ?></td>
-                                        <td><?php echo $cost ?></td>
-                                        <td><?php echo $current_part ?></td>
-                                        <td><?php echo $min_part ?></td>
-                                        <td><?php echo $min_score ?></td>
-                                        <td><?php echo $rew1 ?></td>
-                                        <td><?php echo $rew2 ?></td>
-                                        <td><?php echo $rew3 ?></td>
-                                    </tr>
+                                <tbody class="table-body">
+                                    <tr><td class="text-start">Expires:</td><td class="text-start"><?php echo readable_time($expires) ?></td></tr>
+                                    <tr><td class="text-start">Current Reward:</td><td class="text-start"><?php echo $reward ?></td></tr>
+                                    <tr><td class="text-start">Cost to Join:</td><td class="text-start"><?php echo $cost ?></td></tr>
+                                    <tr><td class="text-start">Current Participants:</td><td class="text-start"><?php echo $current_part ?></td></tr>
+                                    <tr><td class="text-start">Min. Participants for Payout:</td><td class="text-start"><?php echo $min_part ?></td></tr>
+                                    <tr><td class="text-start">Min. Score to Qualify:</td><td class="text-start"><?php echo $min_score ?></td></tr>
+                                    <tr><td class="text-start">1st Place Reward:</td><td class="text-start"><?php echo $rew1 ?>%</td></tr>
+                                    <tr><td class="text-start">2nd Place Reward:</td><td class="text-start"><?php echo $rew2 ?>%</td></tr>
+                                    <tr><td class="text-start">3rd Place Reward:</td><td class="text-start"><?php echo $rew3 ?>%</td></tr>
                                 </tbody>
                             </table>
                         </div>
                         <!-- Top 10 score table -->
                         <div>
-                            <!-- Top 10 scores label -->
-                            <h3 class="view-comp-top10-label">Top 10 Scores</h3>
                             <!-- Top 10 scores table -->
                             <?php if (count($scores) > 0): ?>
                             <table class="table text-dark">
                                 <thead class="table-heading text-center">
-                                    <th>User</th>
-                                    <th>Score</th>
-                                    <th>Time</th>
+                                    <th colspan="4">Top 10 Scores</th>
                                 </thead>
                                 <tbody class="table-body text-center">
+                                    <?php $i = 1; ?>
                                     <?php foreach ($scores as $score) : ?>
                                         <tr>
+                                            <td><?php echo $i++ ?></td>
                                             <td>
                                                 <?php 
                                                     $user_id = se($score, "user_id", 0, false);
@@ -80,7 +68,7 @@ require_once(__DIR__ . "/../../partials/nav.php");
                                                 ?>
                                             </td>
                                             <td><?php se($score, "score", 0); ?></td>
-                                            <td><?php se($score, "created", "-"); ?></td>
+                                            <td><?php echo readable_time(se($score, "created", "-", false)); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

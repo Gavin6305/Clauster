@@ -181,7 +181,7 @@ $all_comps = get_latest_comps($user_id);
     <!-- Profile card -->
     <section class="bg-custom py-3 py-md-5">
         <div class="container">
-            <div class="row justify-content-center">
+            <div class="row justify-content-center card-container">
                 <div class="col-12 col-sm-10 col-md-12 col-lg-10 col-xl-6 col-xxl-10">
                     <div class="card border border-dark rounded-3 shadow-sm">
                         <div class="card-bg-custom card-body p-3 p-md-5 p-xl-5">
@@ -189,7 +189,7 @@ $all_comps = get_latest_comps($user_id);
                             <?php if (!$edit) : ?>
                                 <!-- Username -->
                                 <div class="text-center mb-3">
-                                    <h2><?php se($username); ?></h2>
+                                    <h1><?php se($username); ?></h1>
                                 </div>
                             <?php endif; ?>
                             <!-- Edit profile button -->
@@ -231,18 +231,20 @@ $all_comps = get_latest_comps($user_id);
                             <?php if (!$edit) : ?>
                                 <div>
                                     <?php if (count($all_scores) > 0) : ?>
+                                        <h2>Scores</h2>
                                         <!-- Score history table -->
                                         <table class="table">
                                             <!-- Heading -->
                                             <thead class="table-heading text-center">
-                                                <th colspan="2">Score History</th>
+                                                <th>Score</th>
+                                                <th>Time</th>
                                             </thead>
                                             <!-- Records -->
                                             <tbody class="table-body text-center">
                                                 <?php foreach ($scores_p as $score) : ?>
                                                     <tr>
                                                         <td><?php se($score, "score", 0); ?></td>
-                                                        <td><?php se($score, "created", "-"); ?></td>
+                                                        <td><?php echo readable_time(se($score, "created", "-", false)); ?></td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             </tbody>
@@ -257,18 +259,11 @@ $all_comps = get_latest_comps($user_id);
                             <?php if (!$edit) : ?>
                                 <div>
                                     <?php if (count($all_comps) > 0) : ?>
+                                        <h2>Competitions</h2>
                                         <table class="table">
                                             <thead class="table-heading text-center">
                                                 <th>Name</th>
                                                 <th>Expires</th>
-                                                <th>Current Reward</th>
-                                                <th>Join Fee</th>
-                                                <th>Current Participants</th>
-                                                <th>Min. Participants</th>
-                                                <th>Score to Qualify</th>
-                                                <th>1st pl. Reward</th>
-                                                <th>2nd pl. Reward</th>
-                                                <th>3rd pl. Reward</th>
                                             </thead>
                                             <tbody class="table-body text-center">
                                                 <?php foreach ($all_comps as $comp) : ?>
@@ -282,14 +277,6 @@ $all_comps = get_latest_comps($user_id);
                                                         ?>
                                                     </td>
                                                     <td><?php echo $comp_info['expires']; ?></td>
-                                                    <td><?php echo $comp_info['current_reward']; ?></td>
-                                                    <td><?php echo $comp_info['join_fee']; ?></td>
-                                                    <td><?php echo $comp_info['current_participants']; ?></td>
-                                                    <td><?php echo $comp_info['min_participants']; ?></td>
-                                                    <td><?php echo $comp_info['min_score']; ?></td>
-                                                    <td><?php echo $comp_info['first_place_per']; ?></td>
-                                                    <td><?php echo $comp_info['second_place_per']; ?></td>
-                                                    <td><?php echo $comp_info['third_place_per']; ?></td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             </tbody>

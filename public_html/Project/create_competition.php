@@ -178,8 +178,10 @@
                 <div class="card border border-dark rounded-3 shadow-sm">
                     <div class="card-bg-custom card-body p-3 p-md-4 p-xl-5">
                         <!-- Create competition label -->
-                        <div class="text-center mb-3">
-                            <h1>Create a Competition</h1>
+                        <div class="col-12">
+                            <div class="text-center mb-3">
+                                <h1>Create a Competition</h1>
+                            </div>
                         </div>
                         <!-- Create competition form -->
                         <form onsubmit="return validate(this)" method="POST">
@@ -240,14 +242,10 @@
                                         <label for="minplayers" class="tobecleared">Minimum Amount of Players for Payout:</label>
                                     </div>
                                 </div>
-                                <!-- Creation cost label -->
-                                <div class="col-12">
-                                    <p>Cost to create competition: 2 points</p>
-                                </div>
                                 <!-- Create button -->
                                 <div class="col-12">
                                     <div class="d-grid my-3">
-                                        <button class="btn btn-custom btn-lg" type="submit">Create Competition!</button>
+                                        <button class="btn btn-custom btn-lg" type="submit">Create Competition (2 points)</button>
                                     </div>
                                 </div>
                             </div>

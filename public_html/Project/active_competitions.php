@@ -39,8 +39,8 @@
 ?>
 <section class="bg-custom py-3 py-md-5">
     <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-12 col-sm-10 col-md-12 col-lg-12 col-xl-12 col-xxl-12">
+        <div class="row justify-content-center card-container">
+            <div class="col-12 col-sm-12 col-md-12 col-lg-12 col-xl-12 col-xxl-12">
                 <div class="card border border-dark rounded-3 shadow-sm">
                     <div class="card-bg-custom card-body p-3 p-md-5 p-xl-5">
                         <!-- Active competitions label -->
@@ -51,14 +51,7 @@
                                 <thead class="table-heading text-center">
                                     <th>Name</th>
                                     <th>Expires</th>
-                                    <th>Current Reward</th>
                                     <th>Join Fee</th>
-                                    <th>Current Participants</th>
-                                    <th>Min. Participants</th>
-                                    <th>Score to Qualify</th>
-                                    <th>1st pl. Reward</th>
-                                    <th>2nd pl. Reward</th>
-                                    <th>3rd pl. Reward</th>
                                     <th></th>
                                 </thead>
                                 <?php if (count($comps_p) > 0) : ?>
@@ -73,14 +66,7 @@
                                                 ?>
                                             </td>
                                             <td><?php se($comp, "expires", "-"); ?></td>
-                                            <td><?php se($comp, "current_reward", 0); ?></td>
                                             <td><?php se($comp, "join_fee", 0); ?></td>
-                                            <td><?php se($comp, "current_participants", 0); ?></td>
-                                            <td><?php se($comp, "min_participants", 0); ?></td>
-                                            <td><?php se($comp, "min_score", 0); ?></td>
-                                            <td><?php se($comp, "first_place_per", 0); ?></td>
-                                            <td><?php se($comp, "second_place_per", 0); ?></td>
-                                            <td><?php se($comp, "third_place_per", 0); ?></td>
                                             <td>
                                                 <form onsubmit="return validate(this)" method="POST">
                                                     <input class="btn-custom" type= "submit" name = "join" value = "Join"/>
@@ -90,9 +76,6 @@
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
-                                <?php endif ?>
-                                <?php if (!$comps_p) : ?>
-                                    <h5>No scores for this page</h5>
                                 <?php endif ?>
                             </table>
                             <center>

@@ -6,8 +6,8 @@ require(__DIR__ . "/../../partials/flash.php");
 ?>
 <section class="bg-custom py-3 py-md-5">
     <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-12 col-sm-10 col-md-12 col-lg-10 col-xl-6 col-xxl-10">
+        <div class="row justify-content-center card-container">
+            <div class="col-12 col-sm-10 col-md-10 col-lg-10 col-xl-10 col-xxl-10">
                 <div class="card border border-dark rounded-3 shadow-sm">
                     <div class="card-bg-custom card-body p-3 p-md-5 p-xl-5">
                         <!-- Home label -->
@@ -15,7 +15,7 @@ require(__DIR__ . "/../../partials/flash.php");
                         <!-- Weekly scores table -->
                         <div class="top-scores-container">
                             <?php $scoresW = get_top_10("week"); ?>
-                            <h3>Top Weekly Scores</h3>
+                            <h5>Top Weekly Scores</h5>
                             <table class="table">
                                 <thead class="table-heading text-center">
                                     <th></th>
@@ -36,7 +36,7 @@ require(__DIR__ . "/../../partials/flash.php");
                                                 ?>
                                             </td>
                                             <td><?php se($score, "score", 0); ?></td>
-                                            <td><?php se($score, "created", "-"); ?></td>
+                                            <td><?php echo readable_time(se($score, "created", "-", false)); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -45,7 +45,7 @@ require(__DIR__ . "/../../partials/flash.php");
                         <!-- Monthly scores table -->
                         <div class="top-scores-container">
                             <?php $scoresM = get_top_10("month"); ?>
-                            <h3>Top Monthly Scores</h3>
+                            <h5>Top Monthly Scores</h5>
                             <table class="table">
                                 <thead class="table-heading text-center">
                                     <th></th>
@@ -66,7 +66,7 @@ require(__DIR__ . "/../../partials/flash.php");
                                                 ?>
                                             </td>
                                             <td><?php se($score, "score", 0); ?></td>
-                                            <td><?php se($score, "created", "-"); ?></td>
+                                            <td><?php echo readable_time(se($score, "created", "-", false)); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -75,7 +75,7 @@ require(__DIR__ . "/../../partials/flash.php");
                         <!-- Lifetime scores table -->
                         <div class="top-scores-container">
                             <?php $scoresL = get_top_10("lifetime"); ?>
-                            <h3>Top Lifetime Scores</h3>
+                            <h5>Top Lifetime Scores</h5>
                             <table class="table">
                                 <thead class="table-heading text-center">
                                     <th></th>
@@ -96,7 +96,7 @@ require(__DIR__ . "/../../partials/flash.php");
                                                 ?>
                                             </td>
                                             <td><?php se($score, "score", 0); ?></td>
-                                            <td><?php se($score, "created", "-"); ?></td>
+                                            <td><?php echo readable_time(se($score, "created", "-", false)); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -109,6 +109,13 @@ require(__DIR__ . "/../../partials/flash.php");
     </div>
 </section>
 <style>
+    .top-scores-container {
+    padding-bottom: 1vw;
+    }
+
+    .clauster-logo {
+        padding-bottom: 1vh;
+    }
     h1 {
         text-align: center;
     }

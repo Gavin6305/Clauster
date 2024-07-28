@@ -41,6 +41,7 @@
     --tableBodyTextColor: var(--cardTextColor);
 }
 
+
 /* Remove hyperlinks from links */
 a {
     text-decoration: none;
@@ -48,12 +49,13 @@ a {
 
 /* Navbar layout */
 nav {
-    height: 5vh;
+    z-index: 10;
+    position: relative;
 }
 nav li {
     display: inline-block;
-    margin: 1vh;
 }
+
 .nav-profile-link {
     margin-left: auto;
 }
@@ -63,15 +65,22 @@ nav li {
     background-color: var(--navbarColor);
 }
 /* Navbar text */
-.nav-link, .navbar-brand {
+.nav-link, .navbar-brand, .nav-toggler-text {
     color: var(--navbarTextColor);
 }
-
+.dropdown-menu {
+    background-color: var(--navbarColor);
+}
+.dropdown-link {
+    color: var(--navbarTextColor);
+}
 /* Body background */
 body, .bg-custom {
     background-color: var(--bodyColor);
 }
-
+.game-title {
+    color: var(--bodyColor);
+}
 /* Card background */
 .card-bg-custom {
     background-color: var(--cardColor);
@@ -98,10 +107,6 @@ body, .bg-custom {
     color: var(--buttonTextHoverColor);
 }
 
-.top-scores-container {
-    padding-bottom: 1vw;
-}
-
 table {
     border: 1px solid;
 }
@@ -109,5 +114,6 @@ table {
 .clauster-logo {
     font-family: 'Courier New', Courier, monospace;
     font-weight: bold;
-    font-size: 3vw;
+    font-size: 5vh;
+    padding-top: 2vh;
 }

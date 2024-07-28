@@ -2,8 +2,8 @@
 require(__DIR__ . "/../../partials/nav.php");
 ?>
 <div class="container-fluid">
-    <h1>Clauster</h1>
-    <canvas id="canvas" width="800" height="800" tabindex="1"></canvas>
+    <h1 class="game-title">:</h1>
+    <canvas id="canvas" tabindex="1"></canvas>
 </div>
 
 <?php
@@ -14,21 +14,90 @@ require(__DIR__ . "/../../partials/nav.php");
   
 //Clauster
 var canvas = document.getElementById('canvas');
-var context = canvas.getContext('2d');
 
-//Physical attributes of game members
-var charSize = 40;
-var enemySpeed = 3;
-var bulletSpeed = 10;
-var bulletSize = 15;
+// Set the width and height of the canvas
+const screenWidth = window.innerWidth;
+var canvasSize = 800;
+if (screenWidth <= 1000) {
+  canvasSize = 500;
+}
+if (screenWidth <= 550) {
+  canvasSize = 300;
+}
+canvas.width = canvasSize;
+canvas.height = canvasSize;
+
+// Get canvas context and units based on its size
+var context = canvas.getContext('2d');
+var sizingConstant = canvas.width / 800;
+
+/* ***Physical attributes of game members*** */
+var charSize = 40 * sizingConstant;
+var enemySpeed = 3 * sizingConstant;
+var bulletSpeed = 10 * sizingConstant;
+var bulletSize = 15 * sizingConstant;
 var bulletColor = '#000000';
-var clusterRadius = 80;
+var clusterRadius = 80 * sizingConstant;
 var zoneColor = '#FF8800';
 var enemyColor = '#FF9191';
 var charColor = '#5E9CFF';
 var aimColor = '#FF0000';
 
-//Function to make a square
+/* ***Mouse Input*** */
+// Get mouse coordinates relative to canvas element
+var mouseX = 0;
+var mouseY = 0;
+var docWidth = window.innerWidth;
+var docLength = window.innerHeight;
+
+document.addEventListener('mousemove', (event) => {
+  var rect = canvas.getBoundingClientRect();
+  var canvasPosX = rect.left + window.scrollX;
+  var canvasPosY = rect.top + window.scrollY;
+  mouseX = event.clientX - canvasPosX;
+  mouseY = event.clientY - canvasPosY;
+});
+
+
+/* ***Keyboard input*** */
+// Key Codes
+var w = 87;
+
+// Keep track of pressed keys
+var keys = {w: false};
+
+// Listen for key press
+canvas.addEventListener('keydown', function(e) {
+  if (e.keyCode === w) {
+    keys.w = true;
+  }
+});
+
+// Listen for keyup events
+canvas.addEventListener('keyup', function(e) {
+  if (e.keyCode === w) { // UP 
+    keys.w = false;
+  }
+});
+
+document.addEventListener("touchstart", (e) => {
+  var rect = canvas.getBoundingClientRect();
+  var canvasPosX = rect.left + window.scrollX;
+  var canvasPosY = rect.top + window.scrollY;
+  clientX = e.touches[0].clientX;
+  clientY = e.touches[0].clientY;
+  mouseX = clientX - canvasPosX;
+  mouseY = clientY - canvasPosY;
+  keys.w = true;
+});
+
+document.addEventListener("touchend", () => {
+  keys.w = false;
+});
+
+/* ***Helper functions*** */
+
+//Function to make a square character
 function makeSquare(x, y, length, speed, inCircle) {
   return {
     x: x,
@@ -42,10 +111,11 @@ function makeSquare(x, y, length, speed, inCircle) {
   };
 }
 
+// Draws a circle at (x,y) with radius r and colored color
 function makeCircle(x, y, r, color) {
   context.beginPath();
   context.arc(x, y, r, 0, 2 * Math.PI, false);
-  context.lineWidth = 3;
+  context.lineWidth = 4 * sizingConstant;
   context.strokeStyle = color;
   context.stroke();
 }
@@ -66,18 +136,12 @@ function isColliding(a, b) {
   return result;
 }
 
-//Character
-var character = makeSquare(canvas.width/2, canvas.height/2, charSize, 0);
-
-//Bullet
+// Makes a bullet pointing towards (x,y) and updates bullets
 function makeBullet(x,y) { 
   bullets.push(makeSquare(canvas.width/2, canvas.height/2, bulletSize, normalize([x - canvas.width/2, y - canvas.height/2], bulletSpeed)));
 }
 
-//Array of all bullets
-var bullets = [];
-
-//Make enemy come from edges of screen (returns [x,y])
+// Make enemy come from edges of screen (returns [x,y])
 function getEdge() {
   var sides = [0, canvas.width, 0, canvas.height];
   var index = Math.round(Math.random() * 5);
@@ -87,13 +151,13 @@ function getEdge() {
   return result;
 }
 
-//Normalize a vector
+// Normalize a vector
 function normalize(vector, speed) {
   var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1]);
   return [speed * vector[0] / mag, speed * vector[1] / mag];
 }
 
-//Make enemy
+// Make enemy
 function makeEnemy() { 
   var position = getEdge();
   var enemyX = position[0];
@@ -101,47 +165,40 @@ function makeEnemy() {
   enemies.push(makeSquare(enemyX, enemyY, charSize, normalize([enemyX - canvas.width/2, enemyY - canvas.height/2], enemySpeed)));
 }
 
-//Array of all enemies
+// Clear the canvas
+function erase() {
+  context.fillStyle = '#FFFFFF';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+// Character
+var character = makeSquare(canvas.width/2, canvas.height/2, charSize, 0);
+
+// Array of all bullets
+var bullets = [];
+
+// Array of all enemies
 var enemies = [];
-
-// Key Codes
-var w = 87;
-
-// Keep track of pressed keys
-var keys = {w: false};
 
 // Keep track of the score
 var score = 0;
-
-// Listen for key press
-canvas.addEventListener('keydown', function(e) {
-  if (e.keyCode === w) {
-    keys.w = true;
-  }
-});
-
-// Listen for keyup events
-canvas.addEventListener('keyup', function(e) {
-  if (e.keyCode === w) { // UP 
-    keys.w = false;
-  }
-});
 
 // Show the menu
 function menu() {
   erase();
   // Show the menu
   context.fillStyle = '#000000';
-  context.font = '60px Courier New';
+  context.font = (60 * sizingConstant) + 'px Courier New';
   context.textAlign = 'center';
   context.fillText('Clauster', canvas.width / 2, canvas.height / 5);
-  context.font = '36px Arial';
+  context.font = (36 * sizingConstant) + 'px Arial';
   context.fillText('You are claustrophobic!', canvas.width / 2, canvas.height / 2.7);
-  context.font = '30px Arial';
-  context.fillText('Do not let 5 boxes touch your comfort zone circle!', canvas.width / 2, canvas.height / 2);
-  context.fillText('Use your MOUSE to aim and press \'W\' to shoot', canvas.width / 2, canvas.height / 1.7);
-  context.font = '36px Arial';
-  context.fillText('CLICK TO START', canvas.width / 2, canvas.height / 1.3);
+  context.font = (30 * sizingConstant) + 'px Arial';
+  context.fillText('Do not let 5 enemies touch your comfort zone circle!', canvas.width / 2, canvas.height / 2);
+  context.fillText('PC: use your MOUSE to aim and press \'W\' to shoot', canvas.width / 2, canvas.height / 1.7);
+  context.fillText('Mobile: tap where you want to shoot', canvas.width / 2, canvas.height / 1.5);
+  context.font = (36 * sizingConstant) + 'px Arial';
+  context.fillText('CLICK TO START', canvas.width / 2, canvas.height / 1.2);
   // Start the game on a click
   canvas.addEventListener('click', startGame);
 }
@@ -165,9 +222,6 @@ function startGame() {
   draw();
 }
 
-//Comfort zone spots
-comfortSpots = [];
-
 // Show the end game screen
 function endGame() {
   erase();
@@ -183,10 +237,10 @@ function endGame() {
     saveColor = (user <= 0) ? '#FF0000' : '#00FF00';
   }
   context.fillStyle = '#000000';
-  context.font = '50px Arial';
+  context.font = (50 * sizingConstant) + 'px Arial';
   context.textAlign = 'center';
   context.fillText('Game Over!', canvas.width/2, canvas.height/3);
-  context.font = '36px Arial';
+  context.font = (36 * sizingConstant) + 'px Arial';
   context.fillText('Score: ' + score, canvas.width/2, canvas.height/2.2);
   context.fillStyle = saveColor;
   context.fillText(saveStatus, canvas.width/2, canvas.height/1.75);
@@ -218,26 +272,6 @@ function endGame() {
   http.send(JSON.stringify({"data": data}));
 }
 
-// Clear the canvas
-function erase() {
-  context.fillStyle = '#FFFFFF';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-// Get mouse coordinates relative to canvas element
-var mouseX = 0;
-var mouseY = 0;
-var docWidth = window.innerWidth;
-var docLength = window.innerHeight;
-
-document.addEventListener('mousemove', (event) => {
-  var rect = canvas.getBoundingClientRect();
-  var canvasPosX = rect.left + window.scrollX;
-  var canvasPosY = rect.top + window.scrollY;
-  mouseX = event.clientX - canvasPosX;
-  mouseY = event.clientY - canvasPosY;
-});
-
 // Taken spots
 var takenSpots = 0;
 
@@ -256,17 +290,17 @@ function draw() {
   //Draw aim line
   context.strokeStyle = aimColor;
   context.beginPath();
-  context.setLineDash([5, 15]);
+  context.setLineDash([5 * sizingConstant, 15 * sizingConstant]);
   context.moveTo(canvas.width/2, canvas.height/2);
   context.lineTo(mouseX, mouseY);
   context.stroke();
   
   // Draw the score
   context.fillStyle = '#000000';
-  context.font = '24px Arial';
+  context.font = (24 * sizingConstant) + 'px Arial';
   context.textAlign = 'center';
-  context.fillText('Score: ' + score, canvas.width/2, canvas.height/20);
-  context.fillText('Enemies in Comfort Zone: ' + takenSpots, canvas.width/2, canvas.height/10 );
+  context.fillText('Score: ' + score, canvas.width/2, canvas.height/15);
+  context.fillText('Enemies in Comfort Zone: ' + takenSpots, canvas.width/2, canvas.height/8 );
 
   // Comfort zone circle
   context.setLineDash([]);
@@ -346,10 +380,12 @@ require_once(__DIR__ . "/../../partials/flash.php");
     }
     body {
         overflow: hidden;
+        touch-action: manipulation;
     }
     canvas {
         display: block;
         border: 3px solid black;
         margin: auto;
     }
+
 </style>

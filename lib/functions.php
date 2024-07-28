@@ -666,3 +666,47 @@ function get_latest_comps($user_id, $limit = 10)
     }
     return [];
 }
+
+function readable_time ($timeString) {
+    // Get current timestamp
+    $currentString = date('Y-m-d h:i:s', time());
+
+    // Get date and time arrays
+    $current = explode(' ', $currentString);
+    $past = explode(' ', $timeString);
+
+    $currentDate = explode("-", $current[0]);
+    $currentTime = explode(":", $current[1]);
+
+    $pastDate = explode("-", $past[0]);
+    $pastTime = explode(":", $past[1]);
+    
+    $labels = array('year', 'month', 'day');
+    for ($i = 0; $i < 3; $i++) {
+        $c = intval($currentDate[$i], 10);
+        $p = intval($pastDate[$i], 10);
+
+        $difference = $c - $p;
+
+        if ($difference > 0) {
+            $s = ($difference > 1) ? "s" : "";
+            return $difference . " " . $labels[$i] . $s . " ago";
+        }
+    }
+
+    $labels = array('hour', 'minute', 'second');
+    for ($i = 0; $i < 3; $i++) {
+        $c = intval($currentTime[$i]);
+        $p = intval($pastTime[$i]);
+
+        $difference = $c - $p;
+
+        if ($difference > 0) {
+            $s = ($difference > 1) ? "s" : "";
+            return $difference . " " . $labels[$i] . $s . " ago";
+        }
+    }
+
+   
+
+}
