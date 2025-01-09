@@ -564,6 +564,34 @@ function set_account_public ($user_id) {
     }
 }
 
+// Sets clauster theme for user
+function set_theme ($user_id, $themeNum) {
+    $db = getDB();
+    try {
+        $update = $db->prepare("UPDATE Users SET clauster_theme = :ct WHERE user_id = :uid");
+        $update->execute([":ct" => $themeNum, ":uid" => $user_id]);
+    }
+    catch (Exception $e) {
+        flash("Could not set theme", "warning");
+    }
+}
+
+function get_theme ($user_id) {
+    $db = getDB();
+    $stmt = $db->prepare("SELECT clauster_theme from Users where id = :id");
+    try {
+        $stmt->bindValue(":id", $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($result) {
+            return $result[0]['clauster_theme'];
+        }
+    }
+    catch (PDOException $e) {
+        flash("Error getting theme for user: " . var_export($e->errorInfo, true), "danger");
+    }
+}
+
 function delete_scores($score) {
     $db = getDB();
     try {

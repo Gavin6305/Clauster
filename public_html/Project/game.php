@@ -2,17 +2,25 @@
 require(__DIR__ . "/../../partials/nav.php");
 ?>
 <div class="container-fluid">
-    <h1 class="game-title">:</h1>
+    <h4 class="game-title">:</h4>
     <canvas id="canvas" tabindex="1"></canvas>
 </div>
 
 <?php
   $user_id = get_user_id();
+  $user_theme = $user_id <= 0 ? -1 : get_theme($user_id);
 ?>
 
-<script>
-  
+<script type="module">
+
+import { themes, themesList } from "./clauster/themes.js"
+
 //Clauster
+
+/* ***User*** */
+const user = <?php echo json_encode($user_id); ?>;
+
+/* ***Canvas*** */
 var canvas = document.getElementById('canvas');
 
 // Set the width and height of the canvas
@@ -30,18 +38,25 @@ canvas.height = canvasSize;
 // Get canvas context and units based on its size
 var context = canvas.getContext('2d');
 var sizingConstant = canvas.width / 800;
+context.textBaseline = "middle"
 
 /* ***Physical attributes of game members*** */
 var charSize = 40 * sizingConstant;
-var enemySpeed = 3 * sizingConstant;
 var bulletSpeed = 10 * sizingConstant;
 var bulletSize = 15 * sizingConstant;
-var bulletColor = '#000000';
 var clusterRadius = 80 * sizingConstant;
-var zoneColor = '#FF8800';
-var enemyColor = '#FF9191';
-var charColor = '#5E9CFF';
-var aimColor = '#FF0000';
+var enemySpeed = 3 * sizingConstant;
+var enemyHealth = 1;
+var bossSpeed = 2 * sizingConstant;
+var bossHealth = 3;
+
+/* ***Theme*** */
+// Get user's theme or set default
+var theme = themesList[getTheme()];
+
+/* ***Button properties for menus*** */
+var buttonWidth = 250*sizingConstant;
+var buttonHeight = 50*sizingConstant;
 
 /* ***Mouse Input*** */
 // Get mouse coordinates relative to canvas element
@@ -98,15 +113,32 @@ document.addEventListener("touchend", () => {
 /* ***Helper functions*** */
 
 //Function to make a square character
-function makeSquare(x, y, length, speed, inCircle) {
+function makeSquare(x, y, length, speed, inCircle=false, originalHealth=0, health=0, showHealth=false) {
   return {
     x: x,
     y: y,
     l: length,
     s: speed,
     c: false,
+    h: health,
+    oh: originalHealth,
     draw: function() {
       context.fillRect(this.x - length/2, this.y - length/2, this.l, this.l);
+      if (showHealth) {
+        if (this.h >= 6) {
+          context.fillStyle = "#FF0000";
+        }
+        else if (this.h >= 4) {
+          context.fillStyle = "#FFA700";
+        }
+        else if (this.h >= 2) {
+          context.fillStyle = "#FFF400";
+        }
+        else {
+          context.fillStyle = "#A3FF00";
+        }
+        context.fillRect(this.x - length/2, this.y - length, this.l * this.h/this.oh, this.l/5);
+      }
     }
   };
 }
@@ -162,13 +194,161 @@ function makeEnemy() {
   var position = getEdge();
   var enemyX = position[0];
   var enemyY = position[1];
-  enemies.push(makeSquare(enemyX, enemyY, charSize, normalize([enemyX - canvas.width/2, enemyY - canvas.height/2], enemySpeed)));
+  enemies.push(makeSquare(enemyX, enemyY, charSize, normalize([enemyX - canvas.width/2, enemyY - canvas.height/2], enemySpeed), false, enemyHealth, enemyHealth, true));
 }
 
+// Make boss enemy
+function makeBossEnemy() { 
+  var position = getEdge();
+  var enemyX = position[0];
+  var enemyY = position[1];
+  enemies.push(makeSquare(enemyX, enemyY, charSize, normalize([enemyX - canvas.width/2, enemyY - canvas.height/2], bossSpeed), false, bossHealth, bossHealth, true));
+}
 // Clear the canvas
 function erase() {
-  context.fillStyle = '#FFFFFF';
+  context.fillStyle = theme.backgroundColor;
   context.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+/* Click handlers for each screen */
+let menuClickListener;
+function handleMenuClick (startX, startY, instructionsX, instructionsY, themesX, themesY) {
+  // Start game
+  if (mouseX > startX - buttonWidth/2 && mouseX < startX + buttonWidth/2 && mouseY > startY - buttonHeight/2 && mouseY < startY + buttonHeight/2) {
+    startGame();
+  }
+  // Instructions screen
+  else if (mouseX > instructionsX - buttonWidth/2 && mouseX < instructionsX + buttonWidth/2 && mouseY > instructionsY - buttonHeight/2 && mouseY < instructionsY + buttonHeight/2) {
+    instructionPage();
+  }
+  // Themes screen
+  else if (mouseX > themesX - buttonWidth/2 && mouseX < themesX + buttonWidth/2 && mouseY > themesY - buttonHeight/2 && mouseY < themesY + buttonHeight/2) {
+    themePage();
+  }
+}
+
+let instructionsClickListener;
+function handleInstructionsClick () {
+  menu();
+}
+
+let themesClickListener;
+function handleThemesClick (themeButtons, themeWidth, themeHeight, returnX, returnY) {
+  // Handle theme buttons click
+  for (let i = 0; i < themeButtons.length; i++) {
+    let x = themeButtons[i][0];
+    let y = themeButtons[i][1];
+    let thisTheme = themeButtons[i][2];
+
+    if (mouseX > x - themeWidth/2 && mouseX < x + themeWidth/2 && mouseY > y - themeHeight/2 && mouseY < y + themeHeight/2) {
+      setTheme(i);
+    }
+  }
+  
+  // Handle return to menu click
+  if (mouseX > returnX - buttonWidth/2 && mouseX < returnX + buttonWidth/2 && mouseY > returnY - buttonHeight/2 && mouseY < returnY + buttonHeight/2) {
+    menu();
+  }
+}
+
+/*  ***Pausing*** */
+
+// Pause button properties
+var pauseWidth = canvas.width / 50;
+var pauseHeight = canvas.height / 50;
+var pauseX = canvas.width - 20 * sizingConstant;
+var pauseY = 20*sizingConstant;
+
+// Track if game is paused
+var isPaused = false;
+
+/* ***Enemy spawning*** */
+
+// Configuration settings
+const enemyConfig = {
+    timeBetweenEnemies: 1000, 
+    bossSpawnMinTime: 5000,   
+    bossSpawnMaxTime: 7000,   
+    initialDelay: 1000,       
+};
+
+var enemyTimeoutId;
+var bossTimeoutId;
+var bossRandomDelay;
+
+var enemyTimerStarted;
+var enemyTimerStopped;   
+var bossTimerStarted;
+var bossTimerStopped;
+
+// Spawn regular enemies
+function spawnEnemies() {
+  enemyTimerStarted = Date.now();
+  enemyTimeoutId = setTimeout(() => {
+    makeEnemy(); 
+    spawnEnemies(); 
+  }, enemyConfig.timeBetweenEnemies);
+}
+
+// Spawn boss enemies
+function spawnBossEnemy() {
+  bossTimerStarted = Date.now();
+  bossRandomDelay = getRandomInt(enemyConfig.bossSpawnMinTime, enemyConfig.bossSpawnMaxTime);
+  bossTimeoutId = setTimeout(() => {
+    makeBossEnemy(); 
+    spawnBossEnemy(); 
+  }, bossRandomDelay);
+}
+
+// Stop spawning enemies
+function stopSpawning() {
+  enemyTimerStopped = Date.now();
+  clearTimeout(enemyTimeoutId);
+  bossTimerStopped = Date.now();
+  clearTimeout(bossTimeoutId);
+}
+
+// Start spawning enemies again
+function startSpawning() {
+  // Resume last enemy interval
+  let enemyElapsed = enemyTimerStopped - enemyTimerStarted;
+  enemyTimeoutId = setTimeout(() => {
+    makeEnemy(); 
+    spawnEnemies(); 
+  }, enemyConfig.timeBetweenEnemies - enemyElapsed);
+
+  // Resume last boss interval
+  let bossElapsed = bossTimerStopped - bossTimerStarted;
+  bossTimeoutId = setTimeout(() => {
+    makeBossEnemy(); 
+    spawnBossEnemy(); 
+  }, bossRandomDelay - bossElapsed);
+}
+
+// Function to toggle pause
+function togglePause() {
+  isPaused = !isPaused;
+  if (isPaused) {
+    stopSpawning(); 
+  } 
+  else {
+    startSpawning(); 
+    window.requestAnimationFrame(draw); 
+  }
+}
+
+let pauseClickListener;
+function handlePauseClick (w, h, x, y) {
+  if (mouseX > x - w/2 && mouseX < x + w/2 && mouseY > y - h/2 && mouseY < y + h/2) {
+    togglePause();
+  }
+}
+
+let tabChangeListener;
+function handleTabChange () {
+  if (document.visibilityState == "hidden" && !isPaused) {
+    togglePause();
+  }
 }
 
 // Character
@@ -186,46 +366,213 @@ var score = 0;
 // Show the menu
 function menu() {
   erase();
-  // Show the menu
-  context.fillStyle = '#000000';
+  const zeroX = canvas.width / 2;
+  const zeroY = canvas.height / 2;
+  
+  /* Game title */
+  context.fillStyle = theme.menuTextColor;
+  context.strokeStyle = theme.buttonBorderColor;
+  context.font = (80 * sizingConstant) + 'px Courier New';
+  context.textAlign = 'center';
+  context.fillText('Clauster', zeroX, zeroY - 200*sizingConstant);
+  
+  /* Buttons */
+  context.font = (25 * sizingConstant) + 'px Arial';
+  
+  // Start
+  var startX = zeroX;
+  var startY = canvas.height / 2.3;
+  context.fillText('Start', startX, startY);
+  context.strokeRect(startX - buttonWidth / 2, startY - buttonHeight / 2, buttonWidth, buttonHeight);
+
+  // How to play
+  var instructionsX = zeroX;
+  var instructionsY = startY + 100*sizingConstant;
+  context.fillText('How to Play', instructionsX, instructionsY);
+  context.strokeRect(instructionsX - buttonWidth / 2, instructionsY - buttonHeight / 2, buttonWidth, buttonHeight);
+
+  // Themes
+  var themesX = zeroX;
+  var themesY = instructionsY + 100*sizingConstant;
+  context.fillText('Themes', themesX, themesY);
+  context.strokeRect(themesX - buttonWidth / 2, themesY - buttonHeight / 2, buttonWidth, buttonHeight);
+
+  /* Handle click */
+
+  // Remove other page click listeners
+  canvas.removeEventListener('click', instructionsClickListener);
+  canvas.removeEventListener('click', themesClickListener);
+  canvas.removeEventListener('click', pauseClickListener);
+  document.removeEventListener('visibilitychange', tabChangeListener);
+
+  // Add menu click listener
+  menuClickListener = () => {
+    handleMenuClick(startX, startY, instructionsX, instructionsY, themesX, themesY);
+  };
+  canvas.addEventListener('click', menuClickListener);
+}
+
+// Show instructions page
+function instructionPage() {
+  erase();
+  context.fillStyle = theme.menuTextColor;
+
+  /* Text */
+
+  // Instructions
   context.font = (60 * sizingConstant) + 'px Courier New';
   context.textAlign = 'center';
-  context.fillText('Clauster', canvas.width / 2, canvas.height / 5);
+  context.fillText('Instructions', canvas.width / 2, canvas.height / 5);
+  // You are claustrophobic!
   context.font = (36 * sizingConstant) + 'px Arial';
   context.fillText('You are claustrophobic!', canvas.width / 2, canvas.height / 2.7);
+  // Instructions
   context.font = (30 * sizingConstant) + 'px Arial';
   context.fillText('Do not let 5 enemies touch your comfort zone circle!', canvas.width / 2, canvas.height / 2);
   context.fillText('PC: use your MOUSE to aim and press \'W\' to shoot', canvas.width / 2, canvas.height / 1.7);
   context.fillText('Mobile: tap where you want to shoot', canvas.width / 2, canvas.height / 1.5);
+  // Click anywhere for menu
   context.font = (36 * sizingConstant) + 'px Arial';
-  context.fillText('CLICK TO START', canvas.width / 2, canvas.height / 1.2);
-  // Start the game on a click
-  canvas.addEventListener('click', startGame);
+  context.fillText('Click anywhere to go back to the menu', canvas.width / 2, canvas.height / 1.2);
+
+  /* Handle click */
+
+  // Remove other page click listeners
+  canvas.removeEventListener('click', menuClickListener);
+  canvas.removeEventListener('click', themesClickListener);
+  canvas.removeEventListener('click', pauseClickListener);
+  document.removeEventListener('visibilitychange', tabChangeListener);
+
+  // Add instructions click listener
+  instructionsClickListener = () => {
+    handleInstructionsClick();
+  };
+  canvas.addEventListener('click', instructionsClickListener);
 }
 
-// The delay between enemies (in milliseconds)
-var timeBetweenEnemies = 1000;
+// Show theme select page
+function themePage() {
+  erase();
+  const zeroX = canvas.width / 2;
+  const zeroY = canvas.height / 2;
 
-// ID to track the spawn timeout
-var timeoutId = null;
+  /* Themes page title */
+  context.fillStyle = theme.menuTextColor;
+  context.font = (80 * sizingConstant) + 'px Courier New';
+  context.textAlign = 'center';
+  context.fillText('Themes', zeroX, zeroY - 300*sizingConstant);
+
+  /* Select themes */
+  context.font = (25 * sizingConstant) + 'px Arial';
+  context.fillText('Select a theme below.', zeroX, zeroY - 175*sizingConstant);
+
+  /* Theme buttons */
+  context.font = (25 * sizingConstant) + 'px Arial';
+  context.lineWidth = 10;
+  var themeWidth = 200*sizingConstant;
+  var themeHeight = 100*sizingConstant;
+  
+  var themeButtons = [];
+  var themeNum = 0;
+  let posY = 0;
+  for (const [key, currTheme] of Object.entries(themes)) {
+    // Three themes per row
+    let row = parseInt(themeNum / 3);
+    let col = themeNum % 3;
+
+    // Theme button
+    let posX = zeroX - (1 - col) * (themeWidth + 50 * sizingConstant);
+    posY = zeroY - 50*sizingConstant + row * themeHeight;
+    
+    context.strokeStyle = currTheme.game.zoneColor;
+    context.strokeRect(posX - themeWidth / 2, posY - themeHeight / 2, themeWidth, themeHeight);
+    context.fillStyle = currTheme.backgroundColor;
+    context.fillRect(posX - themeWidth / 2, posY - themeHeight / 2, themeWidth, themeHeight);
+    context.fillStyle = currTheme.game.gameTextColor;
+    context.fillText(currTheme.name, posX, posY);
+
+    themeButtons.push([posX, posY, currTheme])
+    themeNum++;
+  } 
+
+  /* Return to menu */
+  var returnX = zeroX;
+  var returnY = posY + 175*sizingConstant;
+
+  context.fillStyle = theme.menuTextColor;
+  context.strokeStyle = theme.buttonBorderColor;
+  context.lineWidth = 1;
+  context.fillText("Return to Menu", returnX, returnY);
+  context.strokeRect(returnX - buttonWidth / 2, returnY - buttonHeight / 2, buttonWidth, buttonHeight);
+
+  /* Handle clicks */
+  // Remove other page click listeners
+  canvas.removeEventListener('click', menuClickListener);
+  canvas.removeEventListener('click', instructionsClickListener);
+  canvas.removeEventListener('click', pauseClickListener);
+  document.removeEventListener('visibilitychange', tabChangeListener);
+
+  // Add menu click listener
+  themesClickListener = () => {
+    handleThemesClick(themeButtons, themeWidth, themeHeight, returnX, returnY);
+  };
+  canvas.addEventListener('click', themesClickListener);
+
+  // Set reload page code back to menu
+  sessionStorage.setItem("pageCode", 0);
+}
+
+var gameStarted = false;
 
 // Start the game
-function startGame() {   
-  // Kick off the enemy spawn interval
-  timeoutId = setInterval(makeEnemy, timeBetweenEnemies);
+function startGame() {
+  // Prevent multiple start game threads 
+  if (gameStarted) {
+    return;
+  }
+  gameStarted = true;
+  
+  // Kick off enemy spawning
+   spawnEnemies();
 
-  // Make the first enemy
-  setTimeout(makeEnemy, 1000);
+  // Kick off boss enemy spawning
+  spawnBossEnemy();
 
-  // Don't accept any more clicks
-  canvas.removeEventListener('click', startGame);
+  // Remove other page click listeners
+  canvas.removeEventListener('click', menuClickListener);
+  canvas.removeEventListener('click', instructionsClickListener);
+  canvas.removeEventListener('click', themesClickListener);
+
+  // Add pause click listener
+  pauseClickListener = () => {
+    handlePauseClick(pauseWidth, pauseHeight, pauseX, pauseY);
+  };
+  canvas.addEventListener('click', pauseClickListener);
+
+  // Pause the game when the tab visibility changes
+  tabChangeListener = () => {
+    handleTabChange();
+  }
+  document.addEventListener('visibilitychange', tabChangeListener);
+
+  // Set reload page code back to menu
+  sessionStorage.setItem("pageCode", 0);
+
   draw();
+}
+
+
+
+// Utility function to get a random integer between min and max (inclusive)
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 // Show the end game screen
 function endGame() {
+  document.removeEventListener('visibilitychange', tabChangeListener);
+
   erase();
-  user = <?php echo json_encode($user_id); ?>;
   var saveStatus;
   var saveColor;
   if (score <= 0) {
@@ -236,7 +583,7 @@ function endGame() {
     saveStatus = (user <= 0) ? 'Note: Score will not be saved (not logged in)' : 'Your score has successfully been saved!';
     saveColor = (user <= 0) ? '#FF0000' : '#00FF00';
   }
-  context.fillStyle = '#000000';
+  context.fillStyle = theme.endGameTextColor;
   context.font = (50 * sizingConstant) + 'px Arial';
   context.textAlign = 'center';
   context.fillText('Game Over!', canvas.width/2, canvas.height/3);
@@ -244,8 +591,8 @@ function endGame() {
   context.fillText('Score: ' + score, canvas.width/2, canvas.height/2.2);
   context.fillStyle = saveColor;
   context.fillText(saveStatus, canvas.width/2, canvas.height/1.75);
-  context.fillStyle = '#000000';
-  context.fillText('CLICK TO PLAY AGAIN', canvas.width / 2, canvas.height / 1.5);
+  context.fillStyle = theme.endGameTextColor;
+  context.fillText('CLICK TO RETURN TO MENU', canvas.width / 2, canvas.height / 1.5);
   
   //Add score to table
   var finalScore = score;
@@ -263,6 +610,7 @@ function endGame() {
         console.log("Saved score");
       }
       canvas.addEventListener('click', () => {
+        sessionStorage.setItem("pageCode", 0);
         window.location.reload();
       });
     }
@@ -272,23 +620,79 @@ function endGame() {
   http.send(JSON.stringify({"data": data}));
 }
 
+function setTheme (themeNum) {
+  // Set theme for user
+  let data = {
+    themeNum: themeNum
+  }
+  let http = new XMLHttpRequest();
+  http.onreadystatechange = () => {
+    if (http.readyState == 4) {
+      if (http.status === 200) {
+        let data = JSON.parse(http.responseText);
+        console.log("received data", data);
+        console.log("Set theme");
+      }
+    }
+  }
+  http.open("POST", "api/set_theme.php", true);
+  http.setRequestHeader('Content-Type', 'application/json');
+  http.send(JSON.stringify({"data": data}));
+  
+  // Set theme in localstorage
+  sessionStorage.setItem("Theme", themeNum);
+
+  // Reload to apply the theme
+  sessionStorage.setItem("pageCode", 1);
+  window.location.reload();
+}
+
+function getTheme () {
+  if (!sessionStorage.getItem("Theme")) {
+    let userTheme = <?php echo json_encode($user_theme); ?>;
+    if (userTheme <= 0) {
+      sessionStorage.setItem("Theme", 0);
+      return 0;
+    }
+    else {
+      sessionStorage.setItem("Theme", userTheme);
+      return userTheme;
+    }
+  }
+  return sessionStorage.getItem("Theme");
+}
+
 // Taken spots
 var takenSpots = 0;
 
 // User can only shoot one bullet at a time
 var isShotOnce = false;
 
+// Track if game is over
+var gameOver = false;
+
 // Main draw loop
 function draw() {
-  erase();
-
-  var gameOver = false;
-  if (takenSpots == 5) {
-    gameOver = true;
+  // Pause overlay
+  if (isPaused) {
+    context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = 'white';
+    context.font = (32 * sizingConstant) + 'px Arial';
+    context.textAlign = 'center';
+    context.fillText('Click Pause Again to Resume', canvas.width / 2, canvas.height / 2);
+    return;
   }
 
+  erase();
+
+  // Draw pause button
+  context.fillStyle = theme.game.gameTextColor;
+  context.fillRect(pauseX - pauseWidth/2, pauseY - pauseHeight/2, pauseWidth/3, pauseHeight);
+  context.fillRect(pauseX - pauseWidth/2 + (2/3) * pauseWidth, pauseY - pauseHeight/2, pauseWidth/3, pauseHeight);
+
   //Draw aim line
-  context.strokeStyle = aimColor;
+  context.strokeStyle = theme.game.aimColor;
   context.beginPath();
   context.setLineDash([5 * sizingConstant, 15 * sizingConstant]);
   context.moveTo(canvas.width/2, canvas.height/2);
@@ -296,7 +700,7 @@ function draw() {
   context.stroke();
   
   // Draw the score
-  context.fillStyle = '#000000';
+  context.fillStyle = theme.game.gameTextColor;
   context.font = (24 * sizingConstant) + 'px Arial';
   context.textAlign = 'center';
   context.fillText('Score: ' + score, canvas.width/2, canvas.height/15);
@@ -304,7 +708,7 @@ function draw() {
 
   // Comfort zone circle
   context.setLineDash([]);
-  makeCircle(canvas.width/2, canvas.height/2, clusterRadius, zoneColor);
+  makeCircle(canvas.width/2, canvas.height/2, clusterRadius, theme.game.zoneColor);
   
   // Move and draw the enemies
   enemies.forEach(function(enemy) {
@@ -316,7 +720,7 @@ function draw() {
       takenSpots++;
       enemy.c = true;
     }
-    context.fillStyle = enemyColor;
+    context.fillStyle = theme.game.enemyColor;
     enemy.draw();
   });
 
@@ -324,17 +728,20 @@ function draw() {
   bullets.forEach(function(bullet) {
     bullet.x += bullet.s[0];
     bullet.y += bullet.s[1];
-    context.fillStyle = bulletColor;
+    context.fillStyle = theme.game.bulletColor;
     bullet.draw();
   });
 
-  //Make bullet and enemy disappear when they collide
+  //Make enemy lose 1 health if collide with bullet
   for (let i = 0; i < enemies.length; i++) {
     var enemy = enemies[i];
     for (let j = 0; j < bullets.length; j++) {
       var bullet = bullets[j];
       if (!enemies[i].c && isColliding(enemy, bullet)) {
-        enemies.splice(i, 1);
+        enemies[i].h -= 1;
+        if (enemies[i].h <= 0) {
+          enemies.splice(i, 1);
+        }
         bullets.splice(j, 1);
         score++;
       }
@@ -342,7 +749,7 @@ function draw() {
   }
 
   // Draw the character
-  context.fillStyle = charColor;
+  context.fillStyle = theme.game.charColor;
   character.draw();
 
   //Prevents bullet from being shot multiple times at once
@@ -355,19 +762,35 @@ function draw() {
   else {
     isShotOnce = false;
   }
-  
+
+  // Adjust boss health and speed as game progresses
+  bossHealth = score >= 50 ? 3 + (score - 40) / 10 : 3;
+  bossSpeed = score >= 50 ? Math.max(1 * sizingConstant, (2 * sizingConstant) - ((score - 50) / 100) * sizingConstant) : (2 * sizingConstant);
+
   // End the game or keep going
-  if (gameOver) {
-  	endGame();
-  } 
+  if (takenSpots >= 5) {
+    endGame();
+  }
   else {
   	window.requestAnimationFrame(draw);
   }
 }
 
 // Show the menu to start the game
-menu();
-canvas.focus();
+if (sessionStorage.getItem("pageCode")) {
+  if (sessionStorage.getItem("pageCode") == 0) {
+    menu();
+  }
+  else if (sessionStorage.getItem("pageCode") == 1) {
+    themePage();
+  }
+}
+else {
+  menu();
+}
+
+
+//canvas.focus();
 </script>
 
 <?php
