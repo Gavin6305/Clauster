@@ -568,11 +568,11 @@ function set_account_public ($user_id) {
 function set_theme ($user_id, $themeNum) {
     $db = getDB();
     try {
-        $update = $db->prepare("UPDATE Users SET clauster_theme = :ct WHERE user_id = :uid");
+        $update = $db->prepare("UPDATE Users SET clauster_theme = :ct WHERE id = :uid");
         $update->execute([":ct" => $themeNum, ":uid" => $user_id]);
     }
     catch (Exception $e) {
-        flash("Could not set theme", "warning");
+        flash($e, "warning");
     }
 }
 

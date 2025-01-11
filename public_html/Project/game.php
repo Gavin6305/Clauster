@@ -42,12 +42,12 @@ context.textBaseline = "middle"
 
 /* ***Physical attributes of game members*** */
 var charSize = 40 * sizingConstant;
-var bulletSpeed = 10 * sizingConstant;
+var bulletSpeed = 1500 * sizingConstant;
 var bulletSize = 15 * sizingConstant;
 var clusterRadius = 80 * sizingConstant;
-var enemySpeed = 3 * sizingConstant;
+var enemySpeed = 400 * sizingConstant;
 var enemyHealth = 1;
-var bossSpeed = 2 * sizingConstant;
+var bossSpeed = 200 * sizingConstant;
 var bossHealth = 3;
 
 /* ***Theme*** */
@@ -262,6 +262,9 @@ var pauseY = 20*sizingConstant;
 // Track if game is paused
 var isPaused = false;
 
+// Last frame of animation
+var lst;
+
 /* ***Enemy spawning*** */
 
 // Configuration settings
@@ -327,6 +330,7 @@ function startSpawning() {
 
 // Function to toggle pause
 function togglePause() {
+  lst = Date.now();
   isPaused = !isPaused;
   if (isPaused) {
     stopSpawning(); 
@@ -648,16 +652,15 @@ function setTheme (themeNum) {
 }
 
 function getTheme () {
-  if (!sessionStorage.getItem("Theme")) {
+  // If logged in, get user theme
+  if (user > 0) {
     let userTheme = <?php echo json_encode($user_theme); ?>;
-    if (userTheme <= 0) {
-      sessionStorage.setItem("Theme", 0);
-      return 0;
-    }
-    else {
-      sessionStorage.setItem("Theme", userTheme);
-      return userTheme;
-    }
+    sessionStorage.setItem("Theme", userTheme);
+    return userTheme;  
+  }
+  // If not logged in, get theme from sessionStorage
+  if (!sessionStorage.getItem("Theme")) {
+    sessionStorage.setItem("Theme", 0);
   }
   return sessionStorage.getItem("Theme");
 }
@@ -670,6 +673,8 @@ var isShotOnce = false;
 
 // Track if game is over
 var gameOver = false;
+
+
 
 // Main draw loop
 function draw() {
@@ -685,6 +690,10 @@ function draw() {
   }
 
   erase();
+
+  // Variable fps
+  let delta = (lst === undefined) ? 1/1000.0 : (Date.now() - lst) / 1000.0;
+  lst = Date.now();
 
   // Draw pause button
   context.fillStyle = theme.game.gameTextColor;
@@ -712,8 +721,8 @@ function draw() {
   
   // Move and draw the enemies
   enemies.forEach(function(enemy) {
-    enemy.x -= enemy.s[0];
-    enemy.y -= enemy.s[1];
+    enemy.x -= enemy.s[0] * delta;
+    enemy.y -= enemy.s[1] * delta;
     if (!enemy.c && Math.sqrt(Math.pow(enemy.x - canvas.width/2,2) + Math.pow(enemy.y - canvas.height/2,2)) <= clusterRadius) {
       enemy.s[0] = 0;
       enemy.s[1] = 0;
@@ -726,8 +735,8 @@ function draw() {
 
   //Draw bullets
   bullets.forEach(function(bullet) {
-    bullet.x += bullet.s[0];
-    bullet.y += bullet.s[1];
+    bullet.x += bullet.s[0] * delta;
+    bullet.y += bullet.s[1] * delta;
     context.fillStyle = theme.game.bulletColor;
     bullet.draw();
   });
@@ -763,9 +772,17 @@ function draw() {
     isShotOnce = false;
   }
 
+  // Deletes bullets that are outside game
+  for (let k = 0; k < bullets.length; k++) {
+      var bullet = bullets[k];
+      if (bullet.x > canvas.width || bullet.x < 0 || bullet.y < 0 || bullet.y > canvas.height) {
+        bullets.splice(k, 1);
+      }
+  }
+
   // Adjust boss health and speed as game progresses
   bossHealth = score >= 50 ? 3 + (score - 40) / 10 : 3;
-  bossSpeed = score >= 50 ? Math.max(1 * sizingConstant, (2 * sizingConstant) - ((score - 50) / 100) * sizingConstant) : (2 * sizingConstant);
+  bossSpeed = score >= 50 ? Math.max(100 * sizingConstant, (200 * sizingConstant) - ((score - 50) / 100) * sizingConstant) : (200 * sizingConstant);
 
   // End the game or keep going
   if (takenSpots >= 5) {
